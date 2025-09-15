@@ -1,0 +1,61 @@
+name: SonarCloud Code Analysis # 工作流的名称
+
+# 定义触发此工作流的事件
+on:
+  push:
+    branches: [ main, develop ]  # 代码推送到 main 或 develop 分支时触发
+  pull_request:
+    branches: [ main, develop ]  # 向 main 或 develop 分支创建PR时触发
+  # workflow_dispatch: # 取消注释此项，允许在GitHub网页上手动触发此工作流
+
+# 工作流的具体任务
+jobs:
+  analyze:
+    name: SonarCloud Analysis
+    runs-on: windows-latest
+
+    steps:
+      #获取代码
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取所有历史记录和分支，这对SonarCloud的准确分析很重要
+
+      #设置Go环境
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21' # 指定你的Go版本，根据项目需要修改
+          cache: true # 缓存Go模块，加速后续构建
+
+      #下载Go模块依赖
+      - name: Install dependencies
+        run: go mod download
+
+      #运行项目构建
+      - name: Build project
+        run: go build ./...
+
+      #运行测试并生成覆盖率报告
+      - name: Run tests with coverage
+        run: |
+          # -coverprofile=coverage.out 生成覆盖率文件
+          # -covermode=atomic 确保原子计数，适用于并发代码
+          go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      #执行SonarCloud扫描
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # GitHub自动提供，用于PR评论
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}    # 引用我们之前设置的Secret
+        with:
+          # 所有SonarCloud配置参数都通过 'args' 传递
+          args: >
+            -Dsonar.organization=a-hydrogen-ion  # 例如: my-team-org
+            -Dsonar.projectKey=A-Hydrogen-ion_Confession-Wall-Backend    # 例如: my-team-org_my-go-app
+            -Dsonar.sources=.  # 分析当前目录的源代码
+            -Dsonar.go.coverage.reportPaths=coverage.out  # 告诉SonarCloud覆盖率文件的位置
+            -Dsonar.host.url=https://sonarcloud.io # SonarCloud的服务器地址
+            # -Dsonar.issuesReport.console.enable=true # 可选：在Action日志中输出问题报告
+            # -Dsonar.go.govet.reportPaths=report.json # 可选：如果需要集成go vet等报告
