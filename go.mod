@@ -1,3 +1,3 @@
-module wall2025
+module github.com/A-Hydrogen-ion/Confession-Wall-Backend
 
-go 1.25.0
+go 1.25.1
