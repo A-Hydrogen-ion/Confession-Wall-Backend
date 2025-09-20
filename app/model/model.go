@@ -42,8 +42,8 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required"`
 } //LoginRequest结构体将用于处理用户登录请求的数据绑定和验证
 type AuthResponse struct {
-	UserID  uint `json:"user_id"`
-	IsAdmin int  `json:"user_type"`
+	UserID uint   `json:"user_id"`
+	Token  string `json:"token"`
 } //返回结构体
 type Response struct {
 	Data string `json:"data"`
