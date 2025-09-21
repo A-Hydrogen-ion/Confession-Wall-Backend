@@ -1,4 +1,4 @@
-package jwt
+package middleware
 
 import (
 	"errors"
@@ -25,13 +25,13 @@ var CustomSecret = []byte("114514")
 
 type CustomClaims struct {
 	//我在这里加了自己申明的字段，这样你才能评鉴出这是我写的史
-	UserID               int    `json:"user_id"`
+	UserID               uint    `json:"user_id"`
 	Username             string `json:"username"`
 	jwt.RegisteredClaims        // 内嵌标准的声明
 }
 
 // 生成JWT
-func GenerateToken(UserID int, username string) (string, error) {
+func GenerateToken(UserID uint, username string) (string, error) {
 	claims := CustomClaims{
 		UserID,
 		username,

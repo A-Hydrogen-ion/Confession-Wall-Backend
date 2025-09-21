@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/middleware"
 	models "github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/model"
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/service"
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/utils"
@@ -37,7 +38,7 @@ func Register(c *gin.Context) {
 	user := models.User{
 		Username: input.Username,
 		Password: input.Password, // 这里会映射到数据库的 password_hash 列
-		Nickname: input.Nickname, // 直接使用输入的用户类型
+		Nickname: input.Nickname, // 直接使用输入的昵称
 	}
 
 	if err := service.NewUserService().CreateUser(&user); err != nil {
@@ -45,9 +46,9 @@ func Register(c *gin.Context) {
 		return
 	}
 	// 生成 token
-	token, err := utils.GenerateToken(user.ID, user.Username)
+	token, err := middleware.GenerateToken(user.ID, user.Username)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建用户token失败"})
 		return
 	}
 
