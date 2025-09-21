@@ -74,7 +74,6 @@ func HealthMonitor(interval time.Duration) {
 		for range ticker.C {
 			if err := Health(); err != nil {
 				log.Printf("[Healthcheck] 数据库连接不上惹喵: %v", err)
-				// 可选：自动重连逻辑
 			} else {
 				log.Printf("[Healthcheck] 数据库还活着！")
 			}
