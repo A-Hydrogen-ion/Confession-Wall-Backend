@@ -1,9 +1,8 @@
 package jwt
 
 import (
-	//"fmt"
-	//"log"
 	"errors"
+	"log"
 	"time"
 
 	//"os"
@@ -19,7 +18,7 @@ var CustomSecret = []byte("114514")
     // 若使用生成的密钥，则应用启动时初始化密钥
     secret := os.Getenv("JWT_SECRET")
     if secret == "" {
-        log.Fatal("JWT_SECRET environment variable is required")
+        log.Fatal("JWT_SECRET环境不存在！")
     }
     CustomSecret = []byte(secret)
 }*/
@@ -61,5 +60,6 @@ func ParseToken(tokenString string) (*CustomClaims, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("该token无效！请检查")
 	return nil, errors.New("invalid token")
 }
