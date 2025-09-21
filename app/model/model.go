@@ -8,7 +8,7 @@ import (
 // User相关
 // 定义User数据类型
 type User struct {
-	ID       uint   `gorm:"primaryKey" json:"id"`
+	UserID   uint   `gorm:"primaryKey" json:"id"`
 	Username string `gorm:"type:varchar(100);uniqueIndex;not null" json:"username"`
 	Nickname string `gorm:"type:varchar(100);uniqueIndex;not null" json:"nickname"`
 	Password string `gorm:"column:password_hash;not null" json:"-"`

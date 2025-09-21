@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/middleware"
+	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/jwt"
 	models "github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/model"
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/service"
-	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -46,9 +45,9 @@ func Register(c *gin.Context) {
 		return
 	}
 	// 生成 token
-	token, err := middleware.GenerateToken(user.ID, user.Username)
+	token, err := jwt.GenerateToken(user.UserID, user.Username)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建用户token失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
 	}
 
@@ -75,7 +74,7 @@ func Login(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "用户名或密码错误"})
 	}
 	// 生成 token
-	token, err := utils.GenerateToken(user.ID, user.Username)
+	token, err := jwt.GenerateToken(user.UserID, user.Username)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
@@ -83,7 +82,7 @@ func Login(c *gin.Context) {
 
 	//创建会话
 	response := models.AuthResponse{
-		UserID: user.ID,
+		UserID: user.UserID,
 		Token:  token,
 	}
 	//返回参数

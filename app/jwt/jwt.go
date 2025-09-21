@@ -1,8 +1,8 @@
-package middleware
+package jwt
 
 import (
 	"errors"
-	"log"
+	//"log"
 	"time"
 
 	//"os"
@@ -62,6 +62,5 @@ func ParseToken(tokenString string) (*CustomClaims, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("该token无效！请检查")
 	return nil, errors.New("invalid token")
 }
