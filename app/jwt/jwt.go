@@ -25,7 +25,7 @@ var CustomSecret = []byte("114514")
 
 type CustomClaims struct {
 	//我在这里加了自己申明的字段，这样你才能评鉴出这是我写的史
-	UserID               uint    `json:"user_id"`
+	UserID               uint   `json:"user_id"`
 	Username             string `json:"username"`
 	jwt.RegisteredClaims        // 内嵌标准的声明
 }
@@ -37,7 +37,9 @@ func GenerateToken(UserID uint, username string) (string, error) {
 		username,
 		jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)), //设置token过期时间为1天
-			Issuer:    "Server",
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+			Issuer:    "ConfessionWall",
 		},
 	}
 	// 使用SHA256算法创建签名对象

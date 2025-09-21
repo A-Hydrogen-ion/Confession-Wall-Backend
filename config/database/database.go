@@ -1,4 +1,5 @@
 package database
+
 import (
 	"fmt"
 	"log"
@@ -26,13 +27,49 @@ func ConnectDB() {
 	sqlDB.SetMaxOpenConns(100)          //最大打开连接数
 	sqlDB.SetConnMaxLifetime(time.Hour) //连接嘴大时间
 
-	DB = db
-	fmt.Println("连接成功")
+	DB = db // 将连接赋值给全局变量
 	//测试数据库连接
 	var version string
 	if err := DB.Raw("SELECT VERSION()").Scan(&version).Error; err != nil {
-		log.Printf("数据库连接测试失败: %v", err)
+		fmt.Printf("数据库连接测试失败: %v", err)
 	} else {
 		log.Printf("数据库版本: %s", version)
 	}
+	fmt.Println("连接成功")
+}
+
+// 搞个可导出的函数
+func GetDB() *gorm.DB {
+	return DB
+}
+
+// 数据库保活检查
+func Health() error {
+	if DB == nil {
+		return fmt.Errorf("数据库未连接")
+	}
+
+	sqlDB, err := DB.DB()
+	if err != nil {
+		return err
+	}
+
+	return sqlDB.Ping()
+}
+
+// 在启动后每次调用保证数据库没有悄悄四掉
+func HealthMonitor(interval time.Duration) {
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			if err := Health(); err != nil {
+				log.Printf("[Healthcheck] 数据库连接不上惹喵: %v", err)
+				// 可选：自动重连逻辑
+			} else {
+				log.Printf("[Healthcheck] 数据库还活着！")
+			}
+		}
+	}()
 }
