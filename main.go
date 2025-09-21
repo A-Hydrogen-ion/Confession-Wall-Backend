@@ -25,6 +25,9 @@ func main() {
 		log.Fatal("健康检查失败: ", err)
 	}
 	//db := database.GetDB()
+	/*if db == nil {
+	    log.Fatal("无法获取数据库连接")
+	}*/
 	//authMiddleware := middleware.NewAuth(db)
 	//暂时没有需要认证的路由，注释掉
 	// 自动迁移数据库
@@ -33,7 +36,7 @@ func main() {
 		log.Printf("数据库迁移失败: %v", err)
 	}
 	if err := database.Health(); err != nil {
-		log.Fatal("数据库li: ", err)
+		log.Fatal("数据库健康检查失败: ", err)
 	}
 	// 获取配置
 	port := viper.GetInt("server.port")

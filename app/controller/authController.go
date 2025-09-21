@@ -8,6 +8,7 @@ import (
 	models "github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/model"
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/service"
 
+	//"gorm.io/gorm"
 	"github.com/gin-gonic/gin"
 )
 

@@ -2,6 +2,8 @@ package routes
 
 import (
 	"github.com/gin-gonic/gin"
+	//"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/controller"
+	//"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/middleware"
 )
 
 func SetupRouter(r *gin.Engine) *gin.Engine {
