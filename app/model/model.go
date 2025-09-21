@@ -14,7 +14,7 @@ type User struct {
 	Password string `gorm:"column:password_hash;not null" json:"-"`
 }
 
-// 创建用户前哈希密码
+// 创建用户前哈希密码钩子
 func (u *User) BeforeSave(tx *gorm.DB) error {
 	if len(u.Password) > 0 {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
