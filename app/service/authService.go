@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/model"
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/config/database"
@@ -40,10 +41,32 @@ func (s *UserService) CheckUsernameExists(username string) (bool, error) {
 
 // 创建用户
 func (s *UserService) CreateUser(user *model.User) error {
-	result := s.db.Create(user)
-	if result.Error != nil {
-		return result.Error
+	// 预检查唯一性
+	var count int64
+	if err := s.db.Model(&model.User{}).Where("username = ?", user.Username).Count(&count).Error; err != nil {
+		return fmt.Errorf("检查用户名失败: %w", err)
 	}
+	if count > 0 {
+		return fmt.Errorf("用户名已存在")
+	}
+
+	if user.Nickname != "" {
+		if err := s.db.Model(&model.User{}).Where("nickname = ?", user.Nickname).Count(&count).Error; err != nil {
+			return fmt.Errorf("检查昵称失败: %w", err)
+		}
+		if count > 0 {
+			return fmt.Errorf("昵称已存在")
+		}
+	}
+
+	// 创建用户（Hook 会自动处理默认值）
+	if err := s.db.Create(user).Error; err != nil {
+		if strings.Contains(err.Error(), "Duplicate entry") {
+			return fmt.Errorf("用户名或昵称已存在")
+		}
+		return fmt.Errorf("创建用户失败: %w", err)
+	}
+
 	return nil
 }
 

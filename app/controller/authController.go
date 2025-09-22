@@ -29,7 +29,6 @@ func NewAuthController(db *gorm.DB) *AuthController {
 // 注册
 func (authController *AuthController) Register(c *gin.Context) {
 	var input models.RegisterRequest
-
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

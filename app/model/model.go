@@ -1,6 +1,8 @@
 package model
 
 import (
+	"time"
+
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -8,10 +10,13 @@ import (
 // User相关
 // 定义User数据类型
 type User struct {
-	UserID   uint   `gorm:"primaryKey" json:"id"`
-	Username string `gorm:"type:varchar(100);uniqueIndex;not null" json:"username"`
-	Nickname string `gorm:"type:varchar(100);uniqueIndex;not null" json:"nickname"`
-	Password string `gorm:"column:password_hash;not null" json:"-"`
+	UserID    uint      `gorm:"primaryKey" json:"id"`
+	Username  string    `gorm:"type:varchar(100);uniqueIndex;not null" json:"username"`
+	Nickname  string    `gorm:"type:varchar(100);uniqueIndex;not null" json:"nickname"`
+	Avatar    string    `gorm:"column:avatar;not null" json:"avatar"`
+	Password  string    `gorm:"column:password_hash;not null" json:"-"`
+	CreatedAt time.Time `gorm:"column:createdAt;not null" json:"createdAt"`
+	UpdateAt  time.Time `gorm:"column:updateAt;not null" json:"updateAt"`
 }
 
 // 创建用户前哈希密码钩子
@@ -23,6 +28,24 @@ func (u *User) BeforeSave(tx *gorm.DB) error {
 		}
 		u.Password = string(hashedPassword)
 	}
+	return nil
+}
+
+// 创建用户前创建检查钩子
+func (u *User) BeforeCreate(tx *gorm.DB) error {
+	// 设置默认昵称
+	if u.Nickname == "" {
+		u.Nickname = u.Username
+	}
+
+	// 设置时间戳
+	if u.CreatedAt.IsZero() {
+		u.CreatedAt = time.Now()
+	}
+	if u.UpdateAt.IsZero() {
+		u.UpdateAt = time.Now()
+	}
+
 	return nil
 }
 

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	middleware "github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/middleware"
+	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/model"
 
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/config/config"
 	database "github.com/A-Hydrogen-ion/Confession-Wall-Backend/config/database"
@@ -32,7 +33,7 @@ func main() {
 	authMiddleware := middleware.NewAuth(db)
 	//获取数据库实例并创建中间件
 	// 自动迁移数据库
-	err := database.DB.AutoMigrate() //模型尚未构建
+	err := database.DB.AutoMigrate(&model.User{}) //模型尚未构建
 	if err != nil {
 		log.Printf("数据库迁移失败: %v", err)
 	}

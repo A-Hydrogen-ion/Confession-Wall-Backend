@@ -34,14 +34,9 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 		// 用户相关路由可以在这里添加
 		user := api.Group("/user")
 		{
-			user.GET("/profile", func(c *gin.Context) {
-				// 获取从中间件设置的user_id
-				userID, _ := c.Get("user_id")
-				c.JSON(200, gin.H{
-					"user_id": userID,
-					"message": "获取用户信息成功",
-				})
-			})
+			user.GET("/profile", authController.GetMyProfile)
+			// user.PUT("/user/profile", controller.UpdateUserProfile) //更新用户信息
+			// user.PUT("/user/password", controller.UpdateUserPassword)     //修改密码
 		}
 	}
 	{
@@ -54,9 +49,6 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 	// protected.Use(middleware.AuthMiddleware())//改用jwt认证，此处需修改
 	{
 
-		// protected.GET("/user/profile", controller.GetUserProfile)          //获取当前用户信息
-		// protected.PUT("/user/profile", controller.UpdateUserProfile)       //更新用户信息
-		// protected.PUT("/user/password", controller.UpdateUserPassword)     //修改密码
 		// protected.POST("/upload/image", controller.UploadImage)            //上传图片
 		// protected.DELETE("/upload/image/{imageId}", controller.DelImage)   //删除图片
 		// protected.POST("/confessions", controller.PostConfession)          //发布表白
