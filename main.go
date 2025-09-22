@@ -37,7 +37,7 @@ func main() {
 		log.Printf("数据库迁移失败: %v", err)
 	}
 	if err := database.Health(); err != nil {
-		log.Fatal("数据库li: ", err)
+		log.Fatal("数据库健康检查失败: ", err)
 	}
 	// 获取配置
 	port := viper.GetInt("server.port")
