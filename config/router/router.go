@@ -1,13 +1,49 @@
 package routes
 
 import (
+	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/controller"
+	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/middleware"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
-func SetupRouter(r *gin.Engine) *gin.Engine {
+type RouterConfig struct {
+	Engine     *gin.Engine
+	Middleware *middleware.Auth
+	DB         *gorm.DB
+	// 其他配置按需添加，注意，添加了任何新字段都需要去main.go里的routerConfig设置路由
+}
+
+func SetupRouter(config *RouterConfig) *gin.Engine {
+	db := config.DB
+	// 创建所有控制器实例
+	authController := controller.NewAuthController(db)
+	//userController := controller.NewUserController(db)
+	//Controller := controller.NewController(db)
+	// 认证路由
+	auth := config.Engine.Group("/api/auth")
+	{
+		auth.POST("/register", authController.Register)
+		auth.POST("/login", authController.Login)
+	}
 	//路由设置
-	// 公共路由
-	//public := r.Group("/api/auth")
+	//需要jwt认证的API公共路由
+	api := config.Engine.Group("/api")
+	api.Use(authController.JWTMiddleware())
+	{
+		// 用户相关路由可以在这里添加
+		user := api.Group("/user")
+		{
+			user.GET("/profile", func(c *gin.Context) {
+				// 获取从中间件设置的user_id
+				userID, _ := c.Get("user_id")
+				c.JSON(200, gin.H{
+					"user_id": userID,
+					"message": "获取用户信息成功",
+				})
+			})
+		}
+	}
 	{
 		//public.POST("/register", controllers.Register)
 		//public.POST("/login", controllers.Login)
@@ -36,5 +72,5 @@ func SetupRouter(r *gin.Engine) *gin.Engine {
 		// protected.GET("api/blacklist", controller.GetBlackList)            //获取拉黑列表
 	}
 
-	return r
+	return config.Engine
 }
