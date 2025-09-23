@@ -1,0 +1,14 @@
+server:
+  port: 8080
+  host: "localhost"
+
+database:
+  host: "localhost"
+  port: 5432
+  name: "mysql"
+  username: "user"
+  password: "example-password"
+
+log:
+  level: "debug"
+  file: "app.log"

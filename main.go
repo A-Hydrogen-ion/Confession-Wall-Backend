@@ -1,7 +1,71 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+	"os"
+	"time"
 
+	middleware "github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/middleware"
+	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/model"
+	"gorm.io/gorm"
+
+	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/config/config"
+	database "github.com/A-Hydrogen-ion/Confession-Wall-Backend/config/database"
+	routes "github.com/A-Hydrogen-ion/Confession-Wall-Backend/config/router"
+	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
+)
+
+func hel() *gorm.DB { // 数据库健康检查
+	if err := database.Health(); err != nil {
+		log.Fatal("健康检查失败: ", err)
+	}
+	db := database.GetDB()
+	if db == nil {
+		log.Fatal("无法获取数据库连接")
+	}
+	return db
+}
+func migrate(db *gorm.DB) { //数据库迁移及检查函数
+	err := db.AutoMigrate(&model.User{})
+	if err != nil {
+		log.Printf("数据库迁移失败: %v", err)
+	}
+	if err := database.Health(); err != nil {
+		log.Fatal("数据库健康检查失败: ", err)
+	}
+}
 func main() {
-	fmt.Print("success")
+	config.InitViper()      //读取配置
+	database.ConnectDB()    // 连接数据库
+	if database.DB == nil { // 检查数据库连接是否成功
+		log.Fatal("数据库连接失败，程序退出") //使用Fatal以使程序自动结束
+	}
+	db := hel()                              //健康检查
+	authMiddleware := middleware.NewAuth(db) //获取数据库实例并创建中间件
+	migrate(db)                              // 自动迁移数据库
+	port := viper.GetInt("server.port")      // 获取配置
+	host := viper.GetString("server.host")
+	if host == "" {
+		host = "0.0.0.0" // 默认监听来自所有地址的请求
+	}
+	if _, err := os.Stat("uploads"); os.IsNotExist(err) { // 创建图片存储目录 uploads（如不存在则自动创建）
+		if err := os.Mkdir("uploads", os.ModePerm); err != nil {
+			log.Fatalf("创建图片目录失败: %v", err)
+		}
+	}
+	r := gin.Default()                    // 创建 Gin 引擎
+	routerConfig := &routes.RouterConfig{ // 设置路由来配合router中的模块设计
+		Engine:     r,
+		Middleware: authMiddleware,
+		DB:         db,
+	}
+	r = routes.SetupRouter(routerConfig)
+	addr := fmt.Sprintf("%s:%d", host, port)
+	log.Printf("服务启动在 :%s", addr)
+	if err := r.Run(addr); err != nil { // 启动服务器
+		log.Fatalf("服务启动失败啦！: %v", err)
+	}
+	database.HealthMonitor(30 * time.Second) // 每30秒检查一次数据库是否还活着
 }
