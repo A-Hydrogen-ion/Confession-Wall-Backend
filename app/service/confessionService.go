@@ -53,4 +53,26 @@ func DeleteConfession(db *gorm.DB, confessionID uint) error {
 	return db.Delete(&model.Confession{}, confessionID).Error
 }
 
+// 添加评论
+func AddComment(db *gorm.DB, comment *model.Comment) error {
+	comment.CreatedAt = time.Now()
+	return db.Create(comment).Error
+}
+
+// 删除？你还想删除评论？
+// 处理黑名单
+func BlockUser(db *gorm.DB, userID uint, blockedID uint) error {
+	block := &model.Block{
+		UserID:    userID,
+		BlockedID: blockedID,
+		CreatedAt: time.Now(),
+	}
+	return db.Create(block).Error
+}
+
+// 移除黑名单
+func UnblockUser(db *gorm.DB, userID uint, blockedID uint) error {
+	return db.Where("user_id = ? AND blocked_id = ?", userID, blockedID).Delete(&model.Block{}).Error
+}
+
 //依然没有写完，只写了个框架
