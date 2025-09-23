@@ -19,6 +19,17 @@ type User struct {
 	UpdateAt  time.Time `gorm:"column:updateAt;not null" json:"updateAt"`
 }
 
+type Confession struct {
+	ID          uint      `gorm:"primaryKey"`
+	UserID      uint      `gorm:"not null" json:"userId"`
+	Content     string    `gorm:"type:text;not null" json:"content"`
+	Images      []string  `gorm:"type:json" json:"images"`
+	Anonymous   bool      `gorm:"not null" json:"Anonymous"`
+	Private     bool      `gorm:"not null" json:"Private"`
+	PublishedAt time.Time `gorm:"column:publishedAt;not null" json:"publishedAt"`
+	ChangedAt   time.Time `gorm:"column:changedAt;not null" json:"changedAt"`
+}
+
 // 创建用户前哈希密码钩子
 func (u *User) BeforeSave(tx *gorm.DB) error {
 	if len(u.Password) > 0 {
