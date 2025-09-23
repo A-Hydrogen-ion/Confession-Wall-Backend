@@ -1,10 +1,12 @@
 package middleware
 
 import (
+
+	//"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/controller"
 	"net/http"
 	"strings"
 
-	//"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/controller"
+	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/controller"
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/jwt"
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/model"
 	"github.com/gin-gonic/gin"
@@ -22,47 +24,12 @@ func NewAuth(db *gorm.DB) *Auth {
 // JWTMiddleware JWT认证中间件
 func (m *Auth) JWTMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 从Header中获取token
-		authHeader := c.Request.Header.Get("Authorization")
-		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"code":    401,
-				"message": "你没有权限访问哦喵",
-			})
-			//确保请求完全终止
-			c.Abort()
-			return
-		}
-
-		// 检查token格式
-		parts := strings.SplitN(authHeader, " ", 2)
-		if !(len(parts) == 2 && parts[0] == "Bearer") {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"code":    401,
-				"message": "token格式是错误的喵",
-			})
-			c.Abort()
-			return
-		}
-
-		// 解析token
-		claims, err := jwt.ParseToken(parts[1])
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"code":    401,
-				"message": "token无效或已过期了喵",
-				"error":   err.Error(),
-			})
-			c.Abort()
-			return
-		}
+		authHeader := c.Request.Header.Get("Authorization") // 从Header中获取token
+		claims := tokenCheck(c, authHeader)
 		var user model.User
 		result := m.db.First(&user, claims.UserID)
 		if result.Error != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"code":    401,
-				"message": "这个用户不存在喵",
-			})
+			controller.ReturnMsg(c, 401, "这个用户不存在喵")
 			c.Abort()
 			return
 		}
@@ -79,7 +46,30 @@ func (m *Auth) JWTMiddleware() gin.HandlerFunc {
 		c.Set("user_id", user.UserID)
 		c.Set("username", user.Username)
 		c.Set("nickname", user.Nickname)
-
 		c.Next()
 	}
+}
+func tokenCheck(c *gin.Context, authHeader string) *jwt.CustomClaims {
+	if authHeader == "" {
+		controller.ReturnMsg(c, http.StatusUnauthorized, "你没有权限访问哦喵")
+		c.Abort() //确保请求完全终止
+		return nil
+	}
+	parts := strings.SplitN(authHeader, " ", 2) // 检查token格式
+	if !(len(parts) == 2 && parts[0] == "Bearer") {
+		controller.ReturnMsg(c, http.StatusUnauthorized, "token格式是错误的喵")
+		c.Abort()
+		return nil
+	}
+	claims, err := jwt.ParseToken(parts[1]) // 解析token
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"code":    http.StatusUnauthorized,
+			"message": "token无效或已过期了喵",
+			"error":   err.Error(),
+		})
+		c.Abort()
+		return nil
+	}
+	return claims
 }

@@ -32,11 +32,10 @@ func (userController *AuthController) GetMyProfile(c *gin.Context) {
 	var profile model.User
 	result := database.DB.First(&profile, userID)
 	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "没有找到这个用户啊喵"})
+		ReturnMsg(c, 400, "没有找到这个用户啊喵")
 		return
 	}
-	//返回用户的信息
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, gin.H{ //返回用户的信息
 		"user_id":  profile.UserID,
 		"nickname": profile.Nickname,
 		"avatar":   profile.Avatar,
@@ -48,37 +47,27 @@ func (authController *AuthController) UpdateUserProfile(c *gin.Context) {
 	// 获取从中间件设置的 user_id
 	userID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "用户没有登陆啊喵"})
+		ReturnMsg(c, 401, "用户没有登陆啊喵")
 		return
 	}
-
-	// 绑定请求的 JSON 数据
-	var input model.User
+	var input model.User // 绑定请求的 JSON 数据
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ReturnError400(c, err)
 		return
 	}
-
-	// 查找用户
-	var profile model.User
+	var profile model.User // 查找用户
 	result := database.DB.First(&profile, userID)
 	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "没有找到这个用户啊喵"})
+		ReturnMsg(c, 400, "没有找到这个用户啊喵")
 		return
 	}
-
-	// 更新用户信息
-	profile.Nickname = input.Nickname
+	profile.Nickname = input.Nickname // 更新用户信息
 	profile.Avatar = input.Avatar
-
-	// 保存更新
-	if err := database.DB.Save(&profile).Error; err != nil {
+	if err := database.DB.Save(&profile).Error; err != nil { // 保存更新
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "服务器娘宕机了，她不小心把你的信息弄丢了"})
 		return
 	}
-
-	// 返回更新后的用户信息
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, gin.H{ // 返回更新后的用户信息
 		"msg":      "用户资料更新成功了喵",
 		"user_id":  profile.UserID,
 		"nickname": profile.Nickname,

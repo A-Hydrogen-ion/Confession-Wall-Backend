@@ -12,8 +12,14 @@ import (
 	"gorm.io/gorm"
 )
 
+// 已经写不动controller的星期五的小绵羊也写不动注释了
+type AuthController struct {
+	userService *service.UserService
+	db          *gorm.DB
+}
+
 // 自定义返回函数
-func Return400(c *gin.Context, err error) error {
+func ReturnError400(c *gin.Context, err error) error {
 	c.JSON(http.StatusBadRequest, gin.H{
 		"code":  400,
 		"user":  nil,
@@ -22,11 +28,14 @@ func Return400(c *gin.Context, err error) error {
 	})
 	return nil
 }
-
-// 已经写不动controller的星期五的小绵羊也写不动注释了
-type AuthController struct {
-	userService *service.UserService
-	db          *gorm.DB
+func ReturnMsg(c *gin.Context, state int, msg string) error {
+	c.JSON(state, gin.H{
+		"code":  400,
+		"user":  nil,
+		"msg":   msg,
+		"token": nil,
+	})
+	return nil
 }
 
 // 你只需要直到这样做能用而且router调用没有问题，别问，问就是Artificial Intellgence大手笔
@@ -44,28 +53,13 @@ func checkInputRequirement(c *gin.Context, validationErrors validator.Validation
 		switch fieldError.Tag() {
 		//各种类型的错误处理
 		case "required": //不存在必须字段
-			c.JSON(http.StatusBadRequest, gin.H{
-				"code":  400,
-				"user":  nil,
-				"msg":   fmt.Sprintf("%s 是必填字段", fieldError.Field()),
-				"token": nil,
-			})
+			ReturnMsg(c, 400, fmt.Sprintf("%s 是必填字段", fieldError.Field()))
 			return
 		case "min": //字段长度过短
-			c.JSON(http.StatusBadRequest, gin.H{
-				"code":  400,
-				"user":  nil,
-				"msg":   fmt.Sprintf("%s 长度不能少于 %s 个字符", fieldError.Field(), fieldError.Param()),
-				"token": nil,
-			})
+			ReturnMsg(c, 400, fmt.Sprintf("%s 长度不能少于 %s 个字符", fieldError.Field(), fieldError.Param()))
 			return
 		case "max": //字段长度过长
-			c.JSON(http.StatusBadRequest, gin.H{
-				"code":  400,
-				"user":  nil,
-				"msg":   fmt.Sprintf("%s 长度不能超过 %s 个字符", fieldError.Field(), fieldError.Param()),
-				"token": nil,
-			})
+			ReturnMsg(c, 400, fmt.Sprintf("%s 长度不能超过 %s 个字符", fieldError.Field(), fieldError.Param()))
 			return
 		}
 	}
@@ -77,67 +71,43 @@ func (authController *AuthController) isUserExist(c *gin.Context, input models.R
 	//其他错误处理
 	if err != nil {
 		fmt.Println(err)
-		Return400(c, err)
+		ReturnError400(c, err)
 		return
 	}
 	//存在返回逻辑
 	if exists {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"code":  400,
-			"user":  nil,
-			"msg":   "用户已存在",
-			"token": nil,
-		})
+		ReturnMsg(c, 400, "用户已存在")
 		return
 	}
-}
-
-// 修改以提示史山可读性
+} // 修改以提示史山可读性
 // 注册主函数
 func (authController *AuthController) Register(c *gin.Context) {
 	var input models.RegisterRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
 		validationErrors, ok := err.(validator.ValidationErrors)
 		if ok {
-			checkInputRequirement(c, validationErrors)//调用输入错误处理函数
+			checkInputRequirement(c, validationErrors) //调用输入错误处理函数
 			return
 		}
 		// 其他类型的错误处理（？）
-		c.JSON(http.StatusBadRequest, gin.H{
-			"code":  400,
-			"user":  nil,
-			"msg":   err.Error(),
-			"token": nil,
-		})
+		ReturnError400(c, err)
 		return
 	}
-
-	// 检查用户名是否已存在
-	authController.isUserExist(c, input)
-	// 创建用户
-	user := models.User{
+	authController.isUserExist(c, input) // 检查用户名是否已存在
+	user := models.User{                 // 创建用户
 		Username: input.Username,
 		Password: input.Password, // 映射到数据库 password_hash 列，自动使用BeforeSave钩子hash密码
 		Nickname: input.Nickname, // 使用输入的昵称
 	}
-	//错误处理
-	if err := authController.userService.CreateUser(&user); err != nil {
-		Return400(c, err)
+	if err := authController.userService.CreateUser(&user); err != nil { //错误处理
+		ReturnError400(c, err)
 		return
 	}
-
-	// 生成 token
-	token, err := jwt.GenerateToken(user.UserID, user.Username)
+	token, err := jwt.GenerateToken(user.UserID, user.Username) // 生成 token
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":  500,
-			"user":  nil,
-			"msg":   "token生成失败了喵",
-			"token": nil,
-		})
+		ReturnMsg(c, 500, "token生成失败了喵")
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{
 		"code": 200,
 		"data": gin.H{"token": token},
@@ -150,38 +120,30 @@ func (authController *AuthController) Login(c *gin.Context) {
 	var input models.LoginRequest
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		Return400(c, err)
+		ReturnError400(c, err)
 		return
 	}
 
 	// 查找用户模块
 	user, err := authController.userService.GetUserByUsername(input.Username)
 	if err != nil {
-		Return400(c, err)
+		ReturnError400(c, err)
 		return
 	}
 
 	// 验证密码模块
 	if err := user.CheckPassword(input.Password); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"code": 401,
-			"data": nil,
-			"msg":  "用户名或密码错误喵"})
+		ReturnMsg(c, 401, "用户名或密码错误喵")
 		return
 	}
 
 	// 生成 token 模块
 	token, err := jwt.GenerateToken(user.UserID, user.Username)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code": 500,
-			"data": nil,
-			"msg":  "token生成失败喵"})
+		ReturnMsg(c, 500, "token生成失败喵")
 		return
 	}
-
-	// 返回响应模块
-	response := models.AuthResponse{
+	response := models.AuthResponse{ // 返回响应模块
 		UserID: user.UserID,
 		Token:  token,
 	}
@@ -198,10 +160,7 @@ func (authController *AuthController) JWTMiddleware() gin.HandlerFunc {
 		// 从请求头获取 token
 		tokenString := c.GetHeader("Authorization")
 		if tokenString == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"code": 401,
-				"data": nil,
-				"msg":  "token不见了喵"})
+			ReturnMsg(c, 401, "token不见了喵")
 			c.Abort()
 			return
 		}
@@ -209,10 +168,7 @@ func (authController *AuthController) JWTMiddleware() gin.HandlerFunc {
 		// 校验 token模块
 		claims, err := jwt.ParseToken(tokenString)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"code": 401,
-				"data": nil,
-				"msg":  "token 无效喵"})
+			ReturnMsg(c, 401, "token 无效喵")
 			c.Abort()
 			return
 		}

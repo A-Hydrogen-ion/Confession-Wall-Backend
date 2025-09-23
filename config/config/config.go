@@ -33,16 +33,18 @@ func SetDefault() {
 }
 
 func setupConfigFile() {
-	// 设置配置文件名称
-	viper.SetConfigName("config")
-	// 设置配置文件类型
-	viper.SetConfigType("yaml")
+	viper.SetConfigName("config") // 设置配置文件名称
+	viper.SetConfigType("yaml")   // 设置配置文件类型
 	// 添加配置文件搜索路径
 	viper.AddConfigPath(".")        // 当前目录
 	viper.AddConfigPath("./config") // 其他搜索路径
+	readConfig()
+	checkConfig()
+}
 
-	// 读取配置文件
-	if err := viper.ReadInConfig(); err != nil {
+// fatal信息是deepseek生成的，别看我，真的不是我想的（目移）
+func readConfig() {
+	if err := viper.ReadInConfig(); err != nil { // 读取配置文件
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			log.Println("没有找到配置文件，将使用环境变量或默认值哦喵")
 		} else {
@@ -51,8 +53,9 @@ func setupConfigFile() {
 	} else {
 		log.Println("配置文件加载成功了喵")
 	}
-	// 如果配置了错误的数据库地址或启动端口则直接fatal
-	switch {
+}
+func checkConfig() { //配置文件内容检查
+	switch { // 如果配置了错误的数据库地址或启动端口则直接fatal
 	case viper.GetString("database.host") == "":
 		log.Fatal("数据库主机地址未配置,baka")
 	case viper.GetInt("database.port") > 65535 || viper.GetInt("database.port") < 1:
@@ -73,5 +76,4 @@ func setupConfigFile() {
 			log.Fatal("服务端口配置无效啦！要输入数字才行呢~")
 		}
 	}
-	// fatal信息是deepseek生成的，别看我，真的不是我想的（目移）
 }
