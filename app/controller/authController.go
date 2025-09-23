@@ -37,58 +37,50 @@ func NewAuthController(db *gorm.DB) *AuthController {
 	}
 }
 
-// 修改以提示史山可读性
-// 注册
-func (authController *AuthController) Register(c *gin.Context) {
-	var input models.RegisterRequest
-	if err := c.ShouldBindJSON(&input); err != nil {
-		if validationErrors, ok := err.(validator.ValidationErrors); ok {
-			for _, fieldError := range validationErrors {
-				switch fieldError.Tag() {
-				case "required":
-					c.JSON(http.StatusBadRequest, gin.H{
-						"code":  400,
-						"user":  nil,
-						"msg":   fmt.Sprintf("%s 是必填字段", fieldError.Field()),
-						"token": nil,
-					})
-					return
-				case "min":
-					c.JSON(http.StatusBadRequest, gin.H{
-						"code":  400,
-						"user":  nil,
-						"msg":   fmt.Sprintf("%s 长度不能少于 %s 个字符", fieldError.Field(), fieldError.Param()),
-						"token": nil,
-					})
-					return
-				case "max":
-					c.JSON(http.StatusBadRequest, gin.H{
-						"code":  400,
-						"user":  nil,
-						"msg":   fmt.Sprintf("%s 长度不能超过 %s 个字符", fieldError.Field(), fieldError.Param()),
-						"token": nil,
-					})
-					return
-				}
-			}
-		}
-		// 其他类型的错误
-		c.JSON(http.StatusBadRequest, gin.H{
-					"code":  400,
-					"user":  nil,
-					"msg":   err.Error(),
-					"token": nil,
-		})
-		return
-	}
+// 输入要求控制函数
+func checkInputRequirement(c *gin.Context, validationErrors validator.ValidationErrors) {
 
-	// 检查用户名是否已存在
+	for _, fieldError := range validationErrors {
+		switch fieldError.Tag() {
+		//各种类型的错误处理
+		case "required": //不存在必须字段
+			c.JSON(http.StatusBadRequest, gin.H{
+				"code":  400,
+				"user":  nil,
+				"msg":   fmt.Sprintf("%s 是必填字段", fieldError.Field()),
+				"token": nil,
+			})
+			return
+		case "min": //字段长度过短
+			c.JSON(http.StatusBadRequest, gin.H{
+				"code":  400,
+				"user":  nil,
+				"msg":   fmt.Sprintf("%s 长度不能少于 %s 个字符", fieldError.Field(), fieldError.Param()),
+				"token": nil,
+			})
+			return
+		case "max": //字段长度过长
+			c.JSON(http.StatusBadRequest, gin.H{
+				"code":  400,
+				"user":  nil,
+				"msg":   fmt.Sprintf("%s 长度不能超过 %s 个字符", fieldError.Field(), fieldError.Param()),
+				"token": nil,
+			})
+			return
+		}
+	}
+}
+
+// 用户存在验证函数
+func (authController *AuthController) isUserExist(c *gin.Context, input models.RegisterRequest) {
 	exists, err := authController.userService.CheckUsernameExists(input.Username)
+	//其他错误处理
 	if err != nil {
 		fmt.Println(err)
 		Return400(c, err)
 		return
 	}
+	//存在返回逻辑
 	if exists {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":  400,
@@ -98,14 +90,37 @@ func (authController *AuthController) Register(c *gin.Context) {
 		})
 		return
 	}
+}
 
+// 修改以提示史山可读性
+// 注册主函数
+func (authController *AuthController) Register(c *gin.Context) {
+	var input models.RegisterRequest
+	if err := c.ShouldBindJSON(&input); err != nil {
+		validationErrors, ok := err.(validator.ValidationErrors)
+		if ok {
+			checkInputRequirement(c, validationErrors)//调用输入错误处理函数
+			return
+		}
+		// 其他类型的错误处理（？）
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":  400,
+			"user":  nil,
+			"msg":   err.Error(),
+			"token": nil,
+		})
+		return
+	}
+
+	// 检查用户名是否已存在
+	authController.isUserExist(c, input)
 	// 创建用户
 	user := models.User{
 		Username: input.Username,
-		Password: input.Password, // 映射到数据库 password_hash 列
+		Password: input.Password, // 映射到数据库 password_hash 列，自动使用BeforeSave钩子hash密码
 		Nickname: input.Nickname, // 使用输入的昵称
 	}
-
+	//错误处理
 	if err := authController.userService.CreateUser(&user); err != nil {
 		Return400(c, err)
 		return
@@ -130,36 +145,42 @@ func (authController *AuthController) Register(c *gin.Context) {
 	})
 }
 
-// 登录
+// 登录函数
 func (authController *AuthController) Login(c *gin.Context) {
 	var input models.LoginRequest
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		Return400(c, err)
 		return
 	}
 
-	// 查找用户
+	// 查找用户模块
 	user, err := authController.userService.GetUserByUsername(input.Username)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "用户名或密码错误"})
+		Return400(c, err)
 		return
 	}
 
-	// 验证密码
+	// 验证密码模块
 	if err := user.CheckPassword(input.Password); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "用户名或密码错误"})
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"code": 401,
+			"data": nil,
+			"msg":  "用户名或密码错误喵"})
 		return
 	}
 
-	// 生成 token
+	// 生成 token 模块
 	token, err := jwt.GenerateToken(user.UserID, user.Username)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "token 生成失败了喵"})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code": 500,
+			"data": nil,
+			"msg":  "token生成失败喵"})
 		return
 	}
 
-	// 返回响应
+	// 返回响应模块
 	response := models.AuthResponse{
 		UserID: user.UserID,
 		Token:  token,
@@ -171,21 +192,27 @@ func (authController *AuthController) Login(c *gin.Context) {
 	})
 }
 
-// JWT 中间件
+// JWT 中间件函数
 func (authController *AuthController) JWTMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 从请求头获取 token
 		tokenString := c.GetHeader("Authorization")
 		if tokenString == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "token不见了喵"})
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"code": 401,
+				"data": nil,
+				"msg":  "token不见了喵"})
 			c.Abort()
 			return
 		}
 
-		// 校验 token
+		// 校验 token模块
 		claims, err := jwt.ParseToken(tokenString)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "token 无效喵"})
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"code": 401,
+				"data": nil,
+				"msg":  "token 无效喵"})
 			c.Abort()
 			return
 		}
