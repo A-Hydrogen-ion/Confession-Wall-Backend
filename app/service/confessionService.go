@@ -80,5 +80,3 @@ func BlockUser(db *gorm.DB, userID uint, blockedID uint) error {
 func UnblockUser(db *gorm.DB, userID uint, blockedID uint) error {
 	return db.Where("user_id = ? AND blocked_id = ?", userID, blockedID).Delete(&model.Block{}).Error
 }
-
-//依然没有写完，只写了个框架
