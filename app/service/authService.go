@@ -25,18 +25,20 @@ func NewUserService() *UserService {
 // 检查用户名是否存在
 func (s *UserService) CheckUsernameExists(username string) (bool, error) {
 	if s.db == nil {
-		return false, fmt.Errorf("数据库连接未初始化 (s.db is nil)")
+		return false, fmt.Errorf("数据库连接未初始化")
 	}
-	var user model.User
-	result := s.db.Where("username = ?", username).First(&user)
-	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			return false, nil
-		}
-		fmt.Println(result.Error)
-		return false, result.Error
+
+	var count int64
+	err := s.db.Model(&model.User{}).
+		Where("username = ?", username).
+		Count(&count).Error
+
+	if err != nil {
+		log.Printf("数据库查询错误: %v", err)
+		return false, fmt.Errorf("系统繁忙，请稍后重试")
 	}
-	return true, nil
+
+	return count > 0, nil
 }
 
 // 创建用户

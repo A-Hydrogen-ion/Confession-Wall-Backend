@@ -8,8 +8,20 @@ import (
 	models "github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/model"
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/service"
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"
 )
+
+// 自定义返回函数
+func Return400(c *gin.Context, err error) error {
+	c.JSON(http.StatusBadRequest, gin.H{
+		"code":  400,
+		"user":  nil,
+		"msg":   err.Error(),
+		"token": nil,
+	})
+	return nil
+}
 
 // 已经写不动controller的星期五的小绵羊也写不动注释了
 type AuthController struct {
@@ -30,7 +42,43 @@ func NewAuthController(db *gorm.DB) *AuthController {
 func (authController *AuthController) Register(c *gin.Context) {
 	var input models.RegisterRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		if validationErrors, ok := err.(validator.ValidationErrors); ok {
+			for _, fieldError := range validationErrors {
+				switch fieldError.Tag() {
+				case "required":
+					c.JSON(http.StatusBadRequest, gin.H{
+						"code":  400,
+						"user":  nil,
+						"msg":   fmt.Sprintf("%s 是必填字段", fieldError.Field()),
+						"token": nil,
+					})
+					return
+				case "min":
+					c.JSON(http.StatusBadRequest, gin.H{
+						"code":  400,
+						"user":  nil,
+						"msg":   fmt.Sprintf("%s 长度不能少于 %s 个字符", fieldError.Field(), fieldError.Param()),
+						"token": nil,
+					})
+					return
+				case "max":
+					c.JSON(http.StatusBadRequest, gin.H{
+						"code":  400,
+						"user":  nil,
+						"msg":   fmt.Sprintf("%s 长度不能超过 %s 个字符", fieldError.Field(), fieldError.Param()),
+						"token": nil,
+					})
+					return
+				}
+			}
+		}
+		// 其他类型的错误
+		c.JSON(http.StatusBadRequest, gin.H{
+					"code":  400,
+					"user":  nil,
+					"msg":   err.Error(),
+					"token": nil,
+		})
 		return
 	}
 
@@ -38,11 +86,16 @@ func (authController *AuthController) Register(c *gin.Context) {
 	exists, err := authController.userService.CheckUsernameExists(input.Username)
 	if err != nil {
 		fmt.Println(err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "数据库查询错误"})
+		Return400(c, err)
 		return
 	}
 	if exists {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "用户已存在"})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":  400,
+			"user":  nil,
+			"msg":   "用户已存在",
+			"token": nil,
+		})
 		return
 	}
 
@@ -54,14 +107,19 @@ func (authController *AuthController) Register(c *gin.Context) {
 	}
 
 	if err := authController.userService.CreateUser(&user); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建用户失败"})
+		Return400(c, err)
 		return
 	}
 
 	// 生成 token
 	token, err := jwt.GenerateToken(user.UserID, user.Username)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "token 生成失败了喵"})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":  500,
+			"user":  nil,
+			"msg":   "token生成失败了喵",
+			"token": nil,
+		})
 		return
 	}
 
