@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
-
+	"os"
 	"time"
 
 	middleware "github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/middleware"
@@ -45,6 +45,12 @@ func main() {
 	host := viper.GetString("server.host")
 	if host == "" {
 		host = "0.0.0.0" // 默认监听来自所有地址的请求
+	}
+	// 创建图片存储目录 uploads（如不存在则自动创建）
+	if _, err := os.Stat("uploads"); os.IsNotExist(err) {
+		if err := os.Mkdir("uploads", os.ModePerm); err != nil {
+			log.Fatalf("创建图片目录失败: %v", err)
+		}
 	}
 	// 创建 Gin 引擎
 	r := gin.Default()

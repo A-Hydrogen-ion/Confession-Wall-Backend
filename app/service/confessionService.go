@@ -1,7 +1,6 @@
 package service
 
 import (
-	"errors"
 	"time"
 
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/model"
@@ -11,9 +10,6 @@ import (
 // 创建表白
 // 在 service 层通过参数 db *gorm.DB 传递数据库连接
 func CreateConfession(db *gorm.DB, confession *model.Confession) error {
-	if len(confession.Images) > 9 {
-		return errors.New("最多上传9张图片哦喵~")
-	}
 	confession.PublishedAt = time.Now()
 	confession.ChangedAt = time.Now()
 	return db.Create(confession).Error
@@ -26,10 +22,23 @@ func GetAllConfessions(db *gorm.DB, userID uint) ([]model.Confession, error) {
 	return confessions, err
 }
 
-// 获取社区表白（过滤私密、拉黑等逻辑可在此扩展）
-func ListPublicConfessions(db *gorm.DB) ([]model.Confession, error) {
+// 获取社区表白
+func ListPublicConfessions(db *gorm.DB, currentUserID uint) ([]model.Confession, error) {
+	var blockedIDs []uint
+	var blockedByIDs []uint
+	// 当前用户拉黑的
+	db.Model(&model.Block{}).Where("user_id = ?", currentUserID).Pluck("blocked_id", &blockedIDs)
+	// 拉黑了当前用户的
+	db.Model(&model.Block{}).Where("blocked_id = ?", currentUserID).Pluck("user_id", &blockedByIDs)
+	// 合并两个列表
+	excludeIDs := append(blockedIDs, blockedByIDs...)
 	var confessions []model.Confession
-	err := db.Where("is_private = ?", false).Find(&confessions).Error
+	query := db.Where("private = ?", false) //不展示私密表白
+	// 如果有需要排除的用户ID，则添加条件
+	if len(excludeIDs) > 0 {
+		query = query.Where("user_id NOT IN ?", excludeIDs)
+	}
+	err := query.Find(&confessions).Error
 	return confessions, err
 }
 
@@ -38,9 +47,6 @@ func UpdateConfession(db *gorm.DB, confessionID uint, newContent string, newImag
 	var confession model.Confession
 	if err := db.First(&confession, confessionID).Error; err != nil {
 		return err
-	}
-	if len(newImages) > 9 {
-		return errors.New("最多上传9张图片")
 	}
 	confession.Content = newContent
 	confession.Images = newImages

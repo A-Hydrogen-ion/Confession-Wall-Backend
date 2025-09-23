@@ -18,8 +18,8 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 	db := config.DB
 	// 创建所有控制器实例
 	authController := controller.NewAuthController(db)
-	//userController := controller.NewUserController(db)
-	//Controller := controller.NewController(db)
+	confessionController := controller.CreateConfessionController(db)
+
 	// 认证路由
 	auth := config.Engine.Group("/api/auth")
 	{
@@ -62,6 +62,21 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 		// protected.POST("/blacklist", controller.BlacklistUser)             //拉黑用户
 		// protected.POST("/blacklist/{userId}", controller.Unblock)          //取消拉黑
 		// protected.GET("api/blacklist", controller.GetBlackList)            //获取拉黑列表
+	}
+
+	// 表白相关路由
+	confession := config.Engine.Group("/api/confession")
+	{
+		// 发布表白（需要登录），上传图片已经集成到了controller里
+		confession.POST("/post", authController.JWTMiddleware(), confessionController.CreateConfession)
+		// 修改表白（需要登录）
+		confession.POST("/update", authController.JWTMiddleware(), confessionController.UpdateConfession)
+		// 发布评论（需要登录）
+		confession.POST("/comment", authController.JWTMiddleware(), confessionController.AddComment)
+		// 查看社区表白（无需登录）
+		confession.GET("/list", confessionController.ListPublicConfessions)
+		// 查看某条表白的评论（无需登录）
+		confession.GET("/comments", confessionController.ListComments)
 	}
 
 	return config.Engine
