@@ -66,19 +66,20 @@ func checkInputRequirement(c *gin.Context, validationErrors validator.Validation
 }
 
 // 用户存在验证函数
-func (authController *AuthController) isUserExist(c *gin.Context, input models.RegisterRequest) {
+func (authController *AuthController) isUserExist(c *gin.Context, input models.RegisterRequest) bool {
 	exists, err := authController.userService.CheckUsernameExists(input.Username)
 	//其他错误处理
 	if err != nil {
 		fmt.Println(err)
 		ReturnError400(c, err)
-		return
+		return false
 	}
 	//存在返回逻辑
 	if exists {
 		ReturnMsg(c, 400, "用户已存在")
-		return
+		return false
 	}
+	return true
 } // 修改以提示史山可读性
 // 注册主函数
 func (authController *AuthController) Register(c *gin.Context) {
@@ -93,8 +94,11 @@ func (authController *AuthController) Register(c *gin.Context) {
 		ReturnError400(c, err)
 		return
 	}
-	authController.isUserExist(c, input) // 检查用户名是否已存在
-	user := models.User{                 // 创建用户
+	isExist := authController.isUserExist(c, input) // 检查用户名是否已存在
+	if !isExist {
+		return
+	}
+	user := models.User{ // 创建用户
 		Username: input.Username,
 		Password: input.Password, // 映射到数据库 password_hash 列，自动使用BeforeSave钩子hash密码
 		Nickname: input.Nickname, // 使用输入的昵称
@@ -115,7 +119,7 @@ func (authController *AuthController) Register(c *gin.Context) {
 	})
 }
 
-// 登录函数
+// 登录主函数
 func (authController *AuthController) Login(c *gin.Context) {
 	var input models.LoginRequest
 
@@ -127,7 +131,7 @@ func (authController *AuthController) Login(c *gin.Context) {
 	// 查找用户模块
 	user, err := authController.userService.GetUserByUsername(input.Username)
 	if err != nil {
-		ReturnError400(c, err)
+		ReturnMsg(c, 400, "用户名或密码错误喵")
 		return
 	}
 
