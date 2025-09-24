@@ -17,6 +17,7 @@ type RouterConfig struct {
 func SetupRouter(config *RouterConfig) *gin.Engine {
 	db := config.DB
 	authController := controller.NewAuthController(db) // 创建所有控制器实例
+	userController := controller.NewUserController(db)
 	confessionController := controller.CreateConfessionController(db)
 	//路由设置
 	auth := config.Engine.Group("/api/auth") // 认证路由
@@ -33,6 +34,7 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 		{
 			user.GET("/profile", authController.GetMyProfile)
 			user.PUT("/profile", authController.UpdateUserProfile) //更新用户信息
+			user.PUT("/avatar", userController.UploadAvatar)
 			// user.PUT("/user/password", controller.UpdateUserPassword)     //修改密码
 		}
 		confession := config.Engine.Group("/api/confession")
@@ -40,6 +42,7 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			confession.POST("/post", confessionController.CreateConfession)     // 发布表白（需要登录），上传图片已经集成到了controller里
 			confession.POST("/update", confessionController.UpdateConfession)   // 修改表白（需要登录）
 			confession.POST("/comment", confessionController.AddComment)        // 发布评论（需要登录）
+			confession.DELETE("/comment", confessionController.DeleteComment)   // 删除评论（需要登录）
 			confession.GET("/list", confessionController.ListPublicConfessions) // 查看社区表白（无需登录）
 			confession.GET("/comments", confessionController.ListComments)      // 查看某条表白的评论（无需登录）
 		}

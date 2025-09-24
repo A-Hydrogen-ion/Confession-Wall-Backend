@@ -37,7 +37,7 @@ func ReturnMsg(c *gin.Context, state int, msg string) error {
 	return nil
 }
 
-// 你只需要直到这样做能用而且router调用没有问题，别问，问就是Artificial Intellgence大手笔
+// 创建AuthController
 func NewAuthController(db *gorm.DB) *AuthController {
 	return &AuthController{
 		userService: service.NewUserService(),

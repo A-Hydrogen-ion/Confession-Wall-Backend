@@ -1,12 +1,10 @@
 package controller
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
-	"time"
 
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/model"
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/service"
@@ -25,6 +23,19 @@ func CreateConfessionController(db *gorm.DB) *ConfessionController {
 	return &ConfessionController{DB: db}
 }
 
+// QueryUint 从请求 query 中获取参数并转换为 uint
+func QueryUint(c *gin.Context, key string) (uint, error) {
+	valStr := c.Query(key)
+	if valStr == "" {
+		return 0, errors.New(key + " 参数为空")
+	}
+	valUint64, err := strconv.ParseUint(valStr, 10, 64)
+	if err != nil {
+		return 0, errors.New(key + " 参数无效")
+	}
+	return uint(valUint64), nil
+}
+
 // 发布表白
 func (ctrl *ConfessionController) CreateConfession(c *gin.Context) {
 	content := c.PostForm("content")
@@ -38,7 +49,7 @@ func (ctrl *ConfessionController) CreateConfession(c *gin.Context) {
 	}
 
 	// 调用封装的图片上传函数
-	imagePaths, err := ctrl.ctrlImageUpload(c, userID.(uint))
+	imagePaths, err := service.UploadImages(c, userID.(uint))
 	//终于简洁的多了（狂喜
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -57,66 +68,6 @@ func (ctrl *ConfessionController) CreateConfession(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"msg": "发布成功了喵~"})
-}
-
-// 发布评论
-func (ctrl *ConfessionController) AddComment(c *gin.Context) {
-	var req model.Comment
-	//简单的错误处理
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "你向服务器娘发送了一个奇怪的请求喵~"})
-		return
-	}
-	//拒绝没登录的用户发布评论
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "你需要登录才能发表评论哦喵~"})
-		return
-	}
-	//给评论加上用户ID
-	req.UserID = userID.(uint)
-	if err := service.AddComment(ctrl.DB, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"msg": "评论发布成功了，对方收到你的心意了喵~"})
-}
-
-// 查看社区表白
-func (ctrl *ConfessionController) ListPublicConfessions(c *gin.Context) {
-	var uid uint = 0
-	// 获取当前用户ID，若未登录则为0，这样做可以让未登录用户也能看到公共表白
-	if userID, exists := c.Get("user_id"); exists {
-		uid = userID.(uint)
-	}
-	confessions, err := service.ListPublicConfessions(ctrl.DB, uid)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取失败了喵"})
-		return
-	}
-	// 匿名处理
-	for i := range confessions {
-		if confessions[i].Anonymous {
-			confessions[i].UserID = 0
-			// 可选：清空昵称、头像等，但是我根本不想写，让前段去处理去（）
-		}
-	}
-	c.JSON(http.StatusOK, gin.H{"data": confessions})
-}
-
-// 查看某条表白的评论
-func (ctrl *ConfessionController) ListComments(c *gin.Context) {
-	confessionID := c.Query("confession_id")
-	if confessionID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "confession_id是空的？？"})
-		return
-	}
-	var comments []model.Comment
-	if err := ctrl.DB.Where("confession_id = ?", confessionID).Find(&comments).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取评论失败了喵~"})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"data": comments})
 }
 
 // 修改表白
@@ -159,7 +110,7 @@ func (ctrl *ConfessionController) UpdateConfession(c *gin.Context) {
 	}
 	//对重新传回来的图片进行格式和大小检查
 	// 调用封装的图片上传函数
-	imagePaths, err := ctrl.ctrlImageUpload(c, userID.(uint))
+	imagePaths, err := service.UploadImages(c, userID.(uint))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) //imagePath会返回更多的错误信息，这里只做最简单的错误处理
 		return
@@ -174,60 +125,113 @@ func (ctrl *ConfessionController) UpdateConfession(c *gin.Context) {
 	c.JSON(200, gin.H{"msg": "修改成功"})
 }
 
-// 上传图片并返回文件路径
-func (ctrl *ConfessionController) ctrlImageUpload(c *gin.Context, userID uint) ([]string, error) {
-	// 处理上传图片
-	form, err := c.MultipartForm()
+// 查看社区表白
+func (ctrl *ConfessionController) ListPublicConfessions(c *gin.Context) {
+	var uid uint = 0
+	// 获取当前用户ID，若未登录则为0，这样做可以让未登录用户也能看到公共表白
+	if userID, exists := c.Get("user_id"); exists {
+		uid = userID.(uint)
+	}
+	confessions, err := service.ListPublicConfessions(ctrl.DB, uid)
 	if err != nil {
-		return nil, fmt.Errorf("图片上传失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取失败了喵"})
+		return
 	}
-	//判断图片数量
-	files := form.File["images"]
-	if len(files) > 9 {
-		return nil, fmt.Errorf("一次最多上传9张图片喵~")
+	// 匿名处理
+	for i := range confessions {
+		if confessions[i].Anonymous {
+			confessions[i].UserID = 0
+			// 可选：清空昵称、头像等，但是我根本不想写，让前段去处理去（）
+		}
 	}
-	//允许的文件类型和保存路径
-	var imagePaths []string
-	allowed := map[string]bool{
-		"image/jpeg": true,
-		"image/png":  true,
-		"image/webp": true,
+	c.JSON(http.StatusOK, gin.H{"data": confessions})
+}
+
+// 发布评论
+func (ctrl *ConfessionController) AddComment(c *gin.Context) {
+	var req model.Comment
+	//简单的错误处理
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "你向服务器娘发送了一个奇怪的请求喵~"})
+		return
 	}
-
-	// 对上传图片进行格式和大小检查
-	for i, fileHeader := range files {
-		if fileHeader.Size > 15*1024*1024 {
-			return nil, fmt.Errorf("服务器娘不接受超过15MB的图片喵~")
-		}
-
-		file, err := fileHeader.Open()
-		if err != nil {
-			return nil, fmt.Errorf("服务器娘看不懂你上传的图片喵: %v", err)
-		}
-		buf := make([]byte, 512)
-		n, _ := file.Read(buf)
-		filetype := http.DetectContentType(buf[:n])
-
-		if !allowed[filetype] {
-			file.Close()
-			return nil, fmt.Errorf("请不要上传除jpg/png/webp格式以外的图片，服务器娘处理不了这些图片喵~")
-		}
-
-		// 保存图片文件
-		ext := fileHeader.Filename[strings.LastIndex(fileHeader.Filename, "."):]
-		timestamp := time.Now().UnixNano()                               //获取当前系统时间
-		saveName := fmt.Sprintf("%d_%d_%d%s", userID, timestamp, i, ext) //获取时间、用户ID，将图片重命名为这样的格式
-		savePath := "uploads/" + saveName                                //将图片存储到本地的路径
-		out, err := os.Create(savePath)                                  //保存图片
-		if err != nil {
-			file.Close()
-			return nil, fmt.Errorf("服务器娘说图片保存失败惹: %v", err)
-		}
-		file.Seek(0, 0)
-		out.Close()
-		file.Close()
-		imagePaths = append(imagePaths, savePath)
+	//拒绝没登录的用户发布评论
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "你需要登录才能发表评论哦喵~"})
+		return
+	}
+	// 检查 confession_id 是否存在，将评论绑定到对应的表白
+	if req.ConfessionID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "缺少 confession_id，服务器娘不知道你要在哪条表白下评论啊喵"})
+		return
 	}
 
-	return imagePaths, nil
+	//给评论加上用户ID
+	req.UserID = userID.(uint)
+	//保存评论
+	if err := service.AddComment(ctrl.DB, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"msg": "评论发布成功了，对方收到你的心意了喵~"})
+}
+
+// 删除评论？哇泼出去的水还想收回？做梦
+func (ctrl *ConfessionController) DeleteComment(c *gin.Context) {
+	// 从 query 获取 conmment_id
+	commentID, err := QueryUint(c, "comment_id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 获取当前登录用户ID
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "你需要登录才能删除评论喵~"})
+		return
+	}
+
+	// 查询评论，确认是自己发的评论才能删除
+	var comment model.Comment
+	if err := ctrl.DB.First(&comment, commentID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "找不到这个评论喵~"})
+		return
+	}
+
+	if comment.UserID != userID.(uint) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "不能删除别人的评论喵~，你这个大hentai！"})
+		return
+	}
+
+	// 调用 service 删除
+	if err := service.DeleteComment(ctrl.DB, commentID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除评论失败喵~"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"msg": "评论已成功删除喵~"})
+}
+
+// 嘴上说着不要，身体还是诚实的乖乖写了删除评论的controller了呢……
+
+// 查看某条表白的评论
+func (ctrl *ConfessionController) ListComments(c *gin.Context) {
+	// 从 query 获取 confession_id
+	confessionID, err := QueryUint(c, "confession_id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	// 调用 service 层获取评论列表
+	comments, err := service.ListComments(ctrl.DB, confessionID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取评论失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": comments,
+	})
 }
