@@ -22,30 +22,29 @@ func NewUserController(db *gorm.DB) *UserController {
 func (userController *AuthController) GetMyProfile(c *gin.Context) {
 	// 获取从中间件设置的user_id
 	userID, _ := c.Get("user_id")
-	var profile model.User
-	// 如果 userID 为 0 或者avatars没有该用户的头像，返回一个默认头像和昵称
-	switch {
-	case userID == uint(0):
-		// 未登录用户
+
+	// 未登录用户
+	if userID == uint(0) {
 		c.JSON(http.StatusOK, gin.H{
 			"user_id":  0,
 			"nickname": "匿名用户",
-			"avatar":   "uploads/avatars/default.png",
-		})
-		return
-	case database.DB.First(&profile, userID).Error != nil:
-		// 用户没有上传头像
-		c.JSON(http.StatusOK, gin.H{
-			"avatar": "uploads/avatars/default.png",
+			"avatar":   "/uploads/avatars/default.png",
 		})
 		return
 	}
+	// 查询用户信息
+	var profile model.User
 	result := database.DB.First(&profile, userID)
 	if result.Error != nil {
 		ReturnMsg(c, 400, "没有找到这个用户啊喵")
 		return
 	}
-	avatarURL := "/uploads/avatars/" + profile.Avatar
+	// 如果 Avatar 字段为空，使用默认头像
+	avatarURL := "/uploads/avatars/default.png"
+	if profile.Avatar != "" {
+		avatarURL = "/uploads/avatars/" + profile.Avatar
+	}
+
 	c.JSON(http.StatusOK, gin.H{ //返回用户的信息
 		"user_id":  profile.UserID,
 		"nickname": profile.Nickname,
