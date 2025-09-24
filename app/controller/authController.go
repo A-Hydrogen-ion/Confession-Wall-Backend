@@ -22,7 +22,6 @@ type AuthController struct {
 func ReturnError400(c *gin.Context, err error) error {
 	c.JSON(http.StatusBadRequest, gin.H{
 		"code":  400,
-		"user":  nil,
 		"msg":   err.Error(),
 		"token": nil,
 	})
@@ -31,7 +30,6 @@ func ReturnError400(c *gin.Context, err error) error {
 func ReturnMsg(c *gin.Context, state int, msg string) error {
 	c.JSON(state, gin.H{
 		"code":  400,
-		"user":  nil,
 		"msg":   msg,
 		"token": nil,
 	})
@@ -156,29 +154,4 @@ func (authController *AuthController) Login(c *gin.Context) {
 		"data": response,
 		"msg":  "success",
 	})
-}
-
-// JWT 中间件函数
-func (authController *AuthController) JWTMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// 从请求头获取 token
-		tokenString := c.GetHeader("Authorization")
-		if tokenString == "" {
-			ReturnMsg(c, 401, "token不见了喵")
-			c.Abort()
-			return
-		}
-
-		// 校验 token模块
-		claims, err := jwt.ParseToken(tokenString)
-		if err != nil {
-			ReturnMsg(c, 401, "token 无效喵")
-			c.Abort()
-			return
-		}
-
-		// 将 user_id 设置到上下文
-		c.Set("user_id", claims.UserID)
-		c.Next()
-	}
 }

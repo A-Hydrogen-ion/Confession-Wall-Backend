@@ -63,7 +63,7 @@ func (s *UserService) CreateUser(user *model.User) error { // 创建用户
 }
 func (s *UserService) GetUserByUsername(username string) (*model.User, error) { // 根据用户名获取用户
 	var user model.User
-	result := s.db.Where("username = ?", username).First(&user)//查找用户
+	result := s.db.Where("username = ?", username).First(&user) //查找用户
 	if result.Error != nil {
 		return nil, result.Error
 	}
