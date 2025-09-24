@@ -20,45 +20,53 @@ func NewUserService() *UserService { // 检查数据库指针函数
 	}
 	return &UserService{db: database.DB}
 }
-func (s *UserService) CheckUsernameExists(username string) (bool, error) { // 检查用户名是否存在
-	if s.db == nil { //数据库检查
+func (s *UserService) checkFieldExists(fieldName, value string) (bool, error) { //检查特定字段是否存在
+	if s.db == nil {
 		return false, fmt.Errorf("数据库连接未初始化")
 	}
-	var count int64 //查询用户名
+	var count int64
 	err := s.db.Model(&model.User{}).
-		Where("username = ?", username).
+		Where(fieldName+" = ?", value).
 		Count(&count).Error
-
-	if err != nil { //其他错误
-		log.Printf("数据库查询错误: %v", err)
+	if err != nil {
+		log.Printf("数据库查询错误[字段%s]: %v", fieldName, err)
 		return false, fmt.Errorf("系统繁忙，请稍后重试")
 	}
-
 	return count > 0, nil
 }
-func (s *UserService) CreateUser(user *model.User) error { // 创建用户
-	var count int64 // 唯一性检查
-	if err := s.db.Model(&model.User{}).Where("username = ?", user.Username).Count(&count).Error; err != nil {
+func (s *UserService) CheckUsernameExists(username string) (bool, error) { //检查用户名是否存在
+
+	return s.checkFieldExists("username", username)
+}
+func (s *UserService) CheckNicknameExists(nickname string) (bool, error) { //检查昵称是否存在
+	return s.checkFieldExists("nickname", nickname)
+}
+func (s *UserService) CreateUser(user *model.User) error {
+	// 使用 CheckUsernameExists 检查用户名
+	exists, err := s.CheckUsernameExists(user.Username)
+	if err != nil {
 		return fmt.Errorf("检查用户名失败: %w", err)
 	}
-	if count > 0 {
+	if exists {
 		return fmt.Errorf("用户名已存在")
 	}
+	// 如果设置了昵称，使用 CheckNicknameExists 检查昵称
 	if user.Nickname != "" {
-		if err := s.db.Model(&model.User{}).Where("nickname = ?", user.Nickname).Count(&count).Error; err != nil {
+		exists, err := s.CheckNicknameExists(user.Nickname)
+		if err != nil {
 			return fmt.Errorf("检查昵称失败: %w", err)
 		}
-		if count > 0 {
+		if exists {
 			return fmt.Errorf("昵称已存在")
 		}
 	}
-	if err := s.db.Create(user).Error; err != nil { // 创建用户（Hook 会自动处理默认值）
+	// 创建用户
+	if err := s.db.Create(user).Error; err != nil {
 		if strings.Contains(err.Error(), "Duplicate entry") {
 			return fmt.Errorf("用户名或昵称已存在")
 		}
 		return fmt.Errorf("创建用户失败: %w", err)
 	}
-
 	return nil
 }
 func (s *UserService) GetUserByUsername(username string) (*model.User, error) { // 根据用户名获取用户

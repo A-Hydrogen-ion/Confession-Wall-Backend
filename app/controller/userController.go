@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/model"
@@ -61,9 +62,18 @@ func (authController *AuthController) UpdateUserProfile(c *gin.Context) {
 		ReturnMsg(c, 400, "没有找到这个用户啊喵")
 		return
 	}
+	isUsernameExist := authController.IsUserExist(c, input.Username)
+	if !isUsernameExist {
+		return
+	}
+	isNicknameExist := authController.IsUserExist(c, input.Nickname)
+	if !isNicknameExist {
+		return
+	}
 	profile.Nickname = input.Nickname // 更新用户信息
 	profile.Avatar = input.Avatar
 	if err := database.DB.Save(&profile).Error; err != nil { // 保存更新
+		fmt.Print(err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "服务器娘宕机了，她不小心把你的信息弄丢了"})
 		return
 	}

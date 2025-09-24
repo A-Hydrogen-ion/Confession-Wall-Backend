@@ -32,7 +32,7 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 		user := api.Group("/user")
 		{
 			user.GET("/profile", authController.GetMyProfile)
-			// user.PUT("/user/profile", controller.UpdateUserProfile) 		//更新用户信息
+			user.PUT("/profile", authController.UpdateUserProfile) //更新用户信息
 			// user.PUT("/user/password", controller.UpdateUserPassword)     //修改密码
 		}
 		confession := config.Engine.Group("/api/confession")

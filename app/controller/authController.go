@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/jwt"
@@ -29,7 +30,7 @@ func ReturnError400(c *gin.Context, err error) error {
 }
 func ReturnMsg(c *gin.Context, state int, msg string) error {
 	c.JSON(state, gin.H{
-		"code":  400,
+		"code":  state,
 		"msg":   msg,
 		"token": nil,
 	})
@@ -63,23 +64,29 @@ func checkInputRequirement(c *gin.Context, validationErrors validator.Validation
 	}
 }
 
-// 用户存在验证函数
-func (authController *AuthController) isUserExist(c *gin.Context, input models.RegisterRequest) bool {
-	exists, err := authController.userService.CheckUsernameExists(input.Username)
-	//其他错误处理
+// 存在验证函数
+func (authController *AuthController) checkExists(c *gin.Context, input string,
+	checkFunc func(string) (bool, error), errorMsg string) bool {
+	exists, err := checkFunc(input)
 	if err != nil {
-		fmt.Println(err)
+		log.Println("检查存在性错误:", err)
 		ReturnError400(c, err)
 		return false
 	}
-	//存在返回逻辑
 	if exists {
-		ReturnMsg(c, 400, "用户已存在")
+		ReturnMsg(c, 400, errorMsg)
 		return false
 	}
 	return true
-} // 修改以提示史山可读性
-// 注册主函数
+}
+func (authController *AuthController) IsUserExist(c *gin.Context, input string) bool {
+	return authController.checkExists(c, input, authController.userService.CheckUsernameExists, "用户名已存在") // 这里传递的是函数本身，不是调用结果
+} //用户名存在验证函数
+func (authController *AuthController) IsNicknameExist(c *gin.Context, input string) bool {
+	return authController.checkExists(c, input, authController.userService.CheckNicknameExists, "昵称已存在") // 这里传递的是函数本身，不是调用结果
+} //昵称存在验证函数
+
+// 注册主函数// 修改以提示史山可读性
 func (authController *AuthController) Register(c *gin.Context) {
 	var input models.RegisterRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -92,7 +99,7 @@ func (authController *AuthController) Register(c *gin.Context) {
 		ReturnError400(c, err)
 		return
 	}
-	isExist := authController.isUserExist(c, input) // 检查用户名是否已存在
+	isExist := authController.IsUserExist(c, input.Username) // 检查用户名是否已存在
 	if !isExist {
 		return
 	}
@@ -110,7 +117,7 @@ func (authController *AuthController) Register(c *gin.Context) {
 		ReturnMsg(c, 500, "token生成失败了喵")
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, gin.H{ //返回成功
 		"code": 200,
 		"data": gin.H{"token": token},
 		"msg":  "success",
