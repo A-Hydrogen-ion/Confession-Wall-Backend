@@ -1,30 +1,51 @@
-# Confession-Wall-Backend <br>
-this is a ~~4 group mates~~ 4 bammers' homework   <br>
+# Confession Wall — Backend
+this is a ~~4 group mates~~ 4 bammers' homework    <br>
+这是一个用 Go（Gin + GORM）实现的匿名表白墙后端服务，提供用户注册/登录、发表/管理表白、评论、图片上传、拉黑等功能。
 
-## 项目结构： <br>
+## 项目结构：
 
-Confession-Wall-Backend/    <br>
-├── main.go                 # 程序入口   <br>
-├── go.mod                 # Go模块文件  <br>
-├── config/                                <br>
-│   └── config.yaml        # 配置文件   <br>
-├── app/                   # 内部包  <br>
-│   ├── model/             # 数据模型层  <br>
-│   ├── service/           # 业务逻辑层  <br>
-│   ├── controller/        # 控制层   <br>
-│   ├── middleware/        # 中间件   <br>
-│   └── utils/             # 各类工具   <br>
-└── README.md                <br>
+Confession-Wall-Backend/
+├── main.go                 # 程序入口
+├── go.mod                  # Go 模块文件
+├── config/                 # 配置与路由
+│   ├── config.example.yaml # 配置示例
+│   └── router/             # 路由配置
+├── app/                    # 应用代码
+│   ├── model/              # 数据模型
+│   ├── service/            # 业务逻辑
+│   ├── controller/         # 控制器（HTTP handler）
+│   ├── middleware/         # 中间件（JWT 等）
+│   └── jwt/                # JWT 工具
+└── README.md
 
-## 功能实现状态：
-- [x] 个人资料页：可以修改昵称、上传并设置头像（avatar 字段，UploadAvatar 已实现）
-- [x] 密码管理：注册/登录与密码哈希（BeforeSave 钩子与 CheckPassword 已实现）
-- [x] 发布表白：支持发布、可选匿名与私有（CreateConfession）
-- [x] 管理表白：支持修改/删除（UpdateConfession、相关 service 实现）
-- [x] 社区查看：可以查看他人表白，匿名处理已实现（ListPublicConfessions）
-- [x] 拉黑功能：支持拉黑/取消拉黑及查看拉黑列表（BlockController）
-- [x] 图片存储：图片上传与存储由后端处理（UploadAvatar/UploadImages），未使用第三方图床
-- [x] 评论功能：表白的评论（AddComment、ListComments、DeleteComment）
-- [x] 表白带图：支持多图上传，限制最多 9 张（CreateConfession/UpdateConfession 中有校验）
+## 功能实现状态（当前）
 
-注：以上为代码当前可见并实现的功能；部分安全/校验/边界场景（例如更严格的并发冲突处理、输入验证增强、测试覆盖）仍建议进一步完善。
+- [x] 个人资料：修改昵称、上传并设置头像（`app/controller/userController.go`）
+- [x] 注册/登录与密码哈希（`app/model/model.go` 的 `BeforeSave` 与 `CheckPassword`）
+- [x] 发布表白：支持发布、匿名和私有（`app/controller/confessionController.go`）
+- [x] 管理表白：修改、删除（`UpdateConfession` 等）
+- [x] 图片上传与存储：UploadAvatar / UploadImages，存放在 `uploads/` 目录
+- [x] 评论功能：添加/查看/删除评论（`app/controller/confessionController.go`）
+- [x] 拉黑功能：拉黑/取消拉黑/查看拉黑列表（`app/controller/blockController.go`）
+- [x] 表白带图：支持多图上传，限制最多 9 张
+
+> 注：以上为代码中可见并已实现的功能，仍建议进一步完善输入校验、并发冲突处理与测试覆盖。
+
+## 本地运行
+
+1. 复制并编辑配置文件：
+
+```powershell
+copy config\config.example.yaml config\config.yaml
+# 编辑 config\config.yaml，填写数据库连接等信息
+```
+
+2. 安装依赖并运行：
+
+```powershell
+cd d:/wall2025
+go mod tidy
+go run main.go
+```
+
+服务默认监听 `:8080`，可在配置文件中修改。
