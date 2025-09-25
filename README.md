@@ -4,19 +4,19 @@ this is a ~~4 group mates~~ 4 bammers' homework    <br>
 
 ## 项目结构：
 
-Confession-Wall-Backend/
-├── main.go                 # 程序入口
-├── go.mod                  # Go 模块文件
-├── config/                 # 配置与路由
-│   ├── config.example.yaml # 配置示例
-│   └── router/             # 路由配置
-├── app/                    # 应用代码
-│   ├── model/              # 数据模型
-│   ├── service/            # 业务逻辑
-│   ├── controller/         # 控制器（HTTP handler）
-│   ├── middleware/         # 中间件（JWT 等）
-│   └── jwt/                # JWT 工具
-└── README.md
+Confession-Wall-Backend/<br>
+├── main.go                 # 程序入口<br>
+├── go.mod                  # Go 模块文件<br>
+├── config/                 # 配置与路由<br>
+│   ├── config.example.yaml # 配置示例<br>
+│   └── router/             # 路由配置<br>
+├── app/                    # 应用代码<br>
+│   ├── model/              # 数据模型<br>
+│   ├── service/            # 业务逻辑<br>
+│   ├── controller/         # 控制器（HTTP handler）<br>
+│   ├── middleware/         # 中间件（JWT 等）<br>
+│   └── jwt/                # JWT 工具<br>
+└── README.md<br>
 
 ## 功能实现状态（当前）
 
