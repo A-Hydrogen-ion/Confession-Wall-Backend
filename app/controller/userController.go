@@ -74,11 +74,16 @@ func (authController *AuthController) UpdateUserProfile(c *gin.Context) {
 		ReturnMsg(c, http.StatusBadRequest, "没有找到这个用户啊喵")
 		return
 	}
-	if isUsernameExist := authController.IsUserExist(c, input.Username); !isUsernameExist {
-		return
+	// 仅在用户名或昵称发生更改时进行唯一性检查
+	if input.Username != "" && input.Username != profile.Username {
+		if ok := authController.IsUserExist(c, input.Username); !ok {
+			return
+		}
 	}
-	if isNicknameExist := authController.IsUserExist(c, input.Nickname); !isNicknameExist {
-		return
+	if input.Nickname != "" && input.Nickname != profile.Nickname {
+		if ok := authController.IsNicknameExist(c, input.Nickname); !ok {
+			return
+		}
 	}
 	profile.Nickname = input.Nickname // 更新用户信息
 	profile.Avatar = input.Avatar

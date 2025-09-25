@@ -26,10 +26,11 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 		auth.POST("/register", authController.Register)
 		auth.POST("/login", authController.Login)
 	}
-	confession := config.Engine.Group("api/confession")
+	// 公共的 confession 路由（无需登录）
+	publicConfession := config.Engine.Group("/api/confession")
 	{
-		confession.GET("/list", confessionController.ListPublicConfessions) // 查看社区表白（无需登录）
-		confession.GET("/comment", confessionController.ListComments)       // 查看某条表白的评论（无需登录）
+		publicConfession.GET("/list", confessionController.ListPublicConfessions) // 查看社区表白（无需登录）
+		publicConfession.GET("/comment", confessionController.ListComments)       // 查看某条表白的评论（无需登录）
 	}
 	var m middleware.Auth
 	m = *middleware.NewAuth(db)
@@ -43,12 +44,13 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			user.PUT("/avatar", userController.UploadAvatar)
 			// user.PUT("/user/password", controller.UpdateUserPassword)     //修改密码
 		}
-		confession := config.Engine.Group("/api/confession")
+		// 受保护的 confession 路由（需要登录）
+		privateConfession := api.Group("/confession")
 		{
-			confession.POST("/post", confessionController.CreateConfession)   // 发布表白（需要登录），上传图片已经集成到了controller里
-			confession.POST("/update", confessionController.UpdateConfession) // 修改表白（需要登录）
-			confession.POST("/comment", confessionController.AddComment)      // 发布评论（需要登录）
-			confession.DELETE("/comment", confessionController.DeleteComment) // 删除评论（需要登录）
+			privateConfession.POST("/post", confessionController.CreateConfession)   // 发布表白（需要登录），上传图片已经集成到了controller里
+			privateConfession.POST("/update", confessionController.UpdateConfession) // 修改表白（需要登录）
+			privateConfession.POST("/comment", confessionController.AddComment)      // 发布评论（需要登录）
+			privateConfession.DELETE("/comment", confessionController.DeleteComment) // 删除评论（需要登录）
 		}
 		block := api.Group("/blacklist")
 		{
