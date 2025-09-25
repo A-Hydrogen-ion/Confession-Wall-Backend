@@ -1,6 +1,7 @@
 package model
 
 import (
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -54,14 +55,23 @@ type Block struct {
 
 // 创建用户前哈希密码钩子
 func (u *User) BeforeSave(tx *gorm.DB) error {
-	if len(u.Password) > 0 {
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
-		if err != nil {
-			return err
-		}
-		u.Password = string(hashedPassword)
+	if len(u.Password) == 0 || isBcryptHash(u.Password) { //如果已经hash过了则跳过hash
+		return nil
 	}
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	u.Password = string(hashedPassword)
 	return nil
+}
+
+// 判断字符串是否看起来像 bcrypt 的 hash
+func isBcryptHash(s string) bool {
+	if len(s) != 60 {
+		return false
+	}
+	return strings.HasPrefix(s, "$2a$") || strings.HasPrefix(s, "$2b$") || strings.HasPrefix(s, "$2y$")
 }
 
 // 创建用户前创建检查钩子

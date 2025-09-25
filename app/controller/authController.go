@@ -19,38 +19,19 @@ type AuthController struct {
 	db          *gorm.DB
 }
 
-// 自定义返回函数
-func ReturnError400(c *gin.Context, err error) error {
+func ReturnError400(c *gin.Context, err error) error { // 自定义返回错误函数
 	c.JSON(http.StatusBadRequest, gin.H{
-		"code":  400,
+		"code":  http.StatusBadRequest,
 		"msg":   err.Error(),
 		"token": nil,
 	})
 	return nil
 }
 
-func ReturnMsg(c *gin.Context, state int, msg string) error {
+func ReturnMsg(c *gin.Context, state int, msg string) error { //自定义返回消息函数
 	c.JSON(state, gin.H{
 		"code":  state,
 		"msg":   msg,
-		"token": nil,
-	})
-	return nil
-}
-
-func ReturnIMOK(c *gin.Context, msg string) error {
-	c.JSON(http.StatusOK, gin.H{
-		"code":  200,
-		"msg":   msg,
-		"token": nil,
-	})
-	return nil
-}
-
-func ReturnErr(c *gin.Context, state int, msg string) error {
-	c.JSON(state, gin.H{
-		"code":  state,
-		"error": msg,
 		"token": nil,
 	})
 	return nil
@@ -71,13 +52,13 @@ func checkInputRequirement(c *gin.Context, validationErrors validator.Validation
 		switch fieldError.Tag() {
 		//各种类型的错误处理
 		case "required": //不存在必须字段
-			ReturnMsg(c, 400, fmt.Sprintf("%s 是必填字段", fieldError.Field()))
+			ReturnMsg(c, http.StatusBadRequest, fmt.Sprintf("%s 是必填字段", fieldError.Field()))
 			return
 		case "min": //字段长度过短
-			ReturnMsg(c, 400, fmt.Sprintf("%s 长度不能少于 %s 个字符", fieldError.Field(), fieldError.Param()))
+			ReturnMsg(c, http.StatusBadRequest, fmt.Sprintf("%s 长度不能少于 %s 个字符", fieldError.Field(), fieldError.Param()))
 			return
 		case "max": //字段长度过长
-			ReturnMsg(c, 400, fmt.Sprintf("%s 长度不能超过 %s 个字符", fieldError.Field(), fieldError.Param()))
+			ReturnMsg(c, http.StatusBadRequest, fmt.Sprintf("%s 长度不能超过 %s 个字符", fieldError.Field(), fieldError.Param()))
 			return
 		}
 	}
@@ -93,17 +74,21 @@ func (authController *AuthController) checkExists(c *gin.Context, input string,
 		return false
 	}
 	if exists {
-		ReturnMsg(c, 400, errorMsg)
+		ReturnMsg(c, http.StatusBadRequest, errorMsg)
 		return false
 	}
 	return true
 }
+
+// 用户名存在验证函数
 func (authController *AuthController) IsUserExist(c *gin.Context, input string) bool {
 	return authController.checkExists(c, input, authController.userService.CheckUsernameExists, "用户名已存在") // 这里传递的是函数本身，不是调用结果
-} //用户名存在验证函数
+}
+
+// 昵称存在验证函数
 func (authController *AuthController) IsNicknameExist(c *gin.Context, input string) bool {
 	return authController.checkExists(c, input, authController.userService.CheckNicknameExists, "昵称已存在") // 这里传递的是函数本身，不是调用结果
-} //昵称存在验证函数
+}
 
 // 注册主函数// 修改以提示史山可读性
 func (authController *AuthController) Register(c *gin.Context) {
@@ -133,11 +118,11 @@ func (authController *AuthController) Register(c *gin.Context) {
 	}
 	token, err := jwt.GenerateToken(user.UserID, user.Username) // 生成 token
 	if err != nil {
-		ReturnMsg(c, 500, "token生成失败了喵")
+		ReturnMsg(c, http.StatusBadRequest, "token生成失败了喵")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{ //返回成功
-		"code": 200,
+		"code": http.StatusOK,
 		"data": gin.H{"token": token},
 		"msg":  "success",
 	})
@@ -151,24 +136,21 @@ func (authController *AuthController) Login(c *gin.Context) {
 		ReturnError400(c, err)
 		return
 	}
-
 	// 查找用户模块
 	user, err := authController.userService.GetUserByUsername(input.Username)
 	if err != nil {
-		ReturnMsg(c, 400, "用户名或密码错误喵")
+		ReturnMsg(c, http.StatusBadRequest, "用户名或密码错误喵")
 		return
 	}
-
 	// 验证密码模块
 	if err := user.CheckPassword(input.Password); err != nil {
-		ReturnMsg(c, 401, "用户名或密码错误喵")
+		ReturnMsg(c, http.StatusUnauthorized, "用户名或密码错误喵")
 		return
 	}
-
 	// 生成 token 模块
 	token, err := jwt.GenerateToken(user.UserID, user.Username)
 	if err != nil {
-		ReturnMsg(c, 500, "token生成失败喵")
+		ReturnMsg(c, http.StatusInternalServerError, "token生成失败喵")
 		return
 	}
 	response := models.AuthResponse{ // 返回响应模块
@@ -176,7 +158,7 @@ func (authController *AuthController) Login(c *gin.Context) {
 		Token:  token,
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"code": 200,
+		"code": http.StatusOK,
 		"data": response,
 		"msg":  "success",
 	})

@@ -44,7 +44,7 @@ func (ctrl *ConfessionController) CreateConfession(c *gin.Context) {
 	//判断用户有没有登录
 	userID, exists := c.Get("user_id")
 	if !exists {
-		ReturnErr(c, 401, "只有登录的孩子才能发布表白喵~")
+		ReturnMsg(c, 401, "只有登录的孩子才能发布表白喵~")
 		return
 	}
 
@@ -67,7 +67,7 @@ func (ctrl *ConfessionController) CreateConfession(c *gin.Context) {
 		ReturnError400(c, err)
 		return
 	}
-	ReturnIMOK(c, "发布成功了喵~")
+	ReturnMsg(c, http.StatusOK, "发布成功了喵~")
 }
 
 // 修改表白,返回错误统一调用authcontroller里的returnmsg
@@ -75,32 +75,32 @@ func (ctrl *ConfessionController) UpdateConfession(c *gin.Context) {
 	confessionIDStr := c.PostForm("confession_id")
 	confessionID, err := strconv.ParseUint(confessionIDStr, 10, 64)
 	if err != nil {
-		ReturnErr(c, 400, "服务器娘没有查询到这个表白，可能已经被删除了喵~")
+		ReturnMsg(c, 400, "服务器娘没有查询到这个表白，可能已经被删除了喵~")
 		return
 	}
 	userID, exists := c.Get("user_id")
 	if !exists {
-		ReturnErr(c, 401, "只有登录的孩子才能修改表白喵~")
+		ReturnMsg(c, 401, "只有登录的孩子才能修改表白喵~")
 		return
 	}
 	var confession model.Confession
 	if err := ctrl.DB.First(&confession, confessionID).Error; err != nil {
-		ReturnErr(c, 404, "服务器娘没有查询到这个表白，可能已经被删除了喵~")
+		ReturnMsg(c, 404, "服务器娘没有查询到这个表白，可能已经被删除了喵~")
 		return
 	}
 	if confession.UserID != userID.(uint) {
-		ReturnErr(c, 403, "你居然想修改别人的表白，hentai！") //不准修改别人的表白
+		ReturnMsg(c, 403, "你居然想修改别人的表白，hentai！") //不准修改别人的表白
 		return
 	}
 	newContent := c.PostForm("content")
 	form, err := c.MultipartForm()
 	if err != nil {
-		ReturnErr(c, 400, "图片因为某些原因上传失败了喵")
+		ReturnMsg(c, 400, "图片因为某些原因上传失败了喵")
 		return
 	}
 	files := form.File["images"]
 	if len(files) > 9 {
-		ReturnErr(c, 400, "9张图片已经能让对方感受到你的心意了，不要再上传了喵~")
+		ReturnMsg(c, 400, "9张图片已经能让对方感受到你的心意了，不要再上传了喵~")
 		return
 	}
 
@@ -119,7 +119,7 @@ func (ctrl *ConfessionController) UpdateConfession(c *gin.Context) {
 	confession.Images = imagePaths
 	confession.Content = newContent
 	if err := ctrl.DB.Save(&confession).Error; err != nil {
-		ReturnErr(c, 500, "服务器娘宕机了，修改失败了喵~")
+		ReturnMsg(c, 500, "服务器娘宕机了，修改失败了喵~")
 		return
 	}
 	ReturnMsg(c, 200, "修改成功了喵~")
@@ -134,7 +134,7 @@ func (ctrl *ConfessionController) ListPublicConfessions(c *gin.Context) {
 	}
 	confessions, err := service.ListPublicConfessions(ctrl.DB, uid)
 	if err != nil {
-		ReturnErr(c, 500, "获取失败了喵~")
+		ReturnMsg(c, 500, "获取失败了喵~")
 		return
 	}
 	// 匿名处理
@@ -156,18 +156,18 @@ func (ctrl *ConfessionController) AddComment(c *gin.Context) {
 	var req model.Comment
 	//简单的错误处理
 	if err := c.ShouldBindJSON(&req); err != nil {
-		ReturnErr(c, 400, "你向服务器娘发送了一个奇怪的请求喵~")
+		ReturnMsg(c, 400, "你向服务器娘发送了一个奇怪的请求喵~")
 		return
 	}
 	//拒绝没登录的用户发布评论
 	userID, exists := c.Get("user_id")
 	if !exists {
-		ReturnErr(c, 401, "你需要登录才能发表评论哦喵~")
+		ReturnMsg(c, 401, "你需要登录才能发表评论哦喵~")
 		return
 	}
 	// 检查 confession_id 是否存在，将评论绑定到对应的表白
 	if req.ConfessionID == 0 {
-		ReturnErr(c, 400, "缺少 confession_id，服务器娘不知道你要在哪条表白下评论啊喵~")
+		ReturnMsg(c, 400, "缺少 confession_id，服务器娘不知道你要在哪条表白下评论啊喵~")
 		return
 	}
 
@@ -178,7 +178,7 @@ func (ctrl *ConfessionController) AddComment(c *gin.Context) {
 		ReturnError400(c, err)
 		return
 	}
-	ReturnIMOK(c, "评论发布成功了，对方收到你的心意了喵~")
+	ReturnMsg(c, http.StatusOK, "评论发布成功了，对方收到你的心意了喵~")
 }
 
 // 删除评论？哇泼出去的水还想收回？做梦
@@ -193,29 +193,29 @@ func (ctrl *ConfessionController) DeleteComment(c *gin.Context) {
 	// 获取当前登录用户ID
 	userID, exists := c.Get("user_id")
 	if !exists {
-		ReturnErr(c, 401, "你需要登录才能删除评论喵~")
+		ReturnMsg(c, 401, "你需要登录才能删除评论喵~")
 		return
 	}
 
 	// 查询评论，确认是自己发的评论才能删除
 	var comment model.Comment
 	if err := ctrl.DB.First(&comment, commentID).Error; err != nil {
-		ReturnErr(c, 404, "服务器娘没有查询到这个评论，可能已经被删除了喵~")
+		ReturnMsg(c, 404, "服务器娘没有查询到这个评论，可能已经被删除了喵~")
 		return
 	}
 
 	if comment.UserID != userID.(uint) {
-		ReturnErr(c, 403, "不能删除别人的评论喵~，你这个大hentai！")
+		ReturnMsg(c, 403, "不能删除别人的评论喵~，你这个大hentai！")
 		return
 	}
 
 	// 调用 service 删除
 	if err := service.DeleteComment(ctrl.DB, commentID); err != nil {
-		ReturnErr(c, 500, "服务器娘宕机了，删除评论失败了喵~")
+		ReturnMsg(c, 500, "服务器娘宕机了，删除评论失败了喵~")
 		return
 	}
 
-	ReturnIMOK(c, "评论已成功删除喵~")
+	ReturnMsg(c, http.StatusOK, "评论已成功删除喵~")
 }
 
 // 嘴上说着不要，身体还是诚实的乖乖写了删除评论的controller了呢……
@@ -231,7 +231,7 @@ func (ctrl *ConfessionController) ListComments(c *gin.Context) {
 	// 调用 service 层获取评论列表
 	comments, err := service.ListComments(ctrl.DB, confessionID)
 	if err != nil {
-		ReturnErr(c, 500, "服务器娘宕机了，获取评论失败了喵~")
+		ReturnMsg(c, 500, "服务器娘宕机了，获取评论失败了喵~")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
