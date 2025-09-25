@@ -100,12 +100,11 @@ func (blockController *BlockController) GetBlockedUsers(c *gin.Context) {
 	// 如果没拉黑任何人
 	if len(blockedIDs) == 0 {
 		c.JSON(http.StatusOK, gin.H{
-			"code": 200,
+			"code":          200,
 			"blocked_users": []model.User{},
-			"msg":  "success",
+			"msg":           "success",
 		})
 		return
-	}
 	}
 
 	// 查询对应用户信息
@@ -115,8 +114,8 @@ func (blockController *BlockController) GetBlockedUsers(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"code": 200,
+		"code":          200,
 		"blocked_users": users,
-		"msg":  "success",
+		"msg":           "success",
 	})
 }
