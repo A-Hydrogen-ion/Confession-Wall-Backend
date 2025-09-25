@@ -18,6 +18,13 @@ func InitViper() {
 	// 自动绑定环境变量（将以APP_开头的环境变量绑定到配置键）
 	viper.SetEnvPrefix("APP")
 	viper.AutomaticEnv()
+	viper.BindEnv("server.port", "APP_SERVER_PORT")
+	viper.BindEnv("database.host", "APP_DATABASE_HOST")
+	viper.BindEnv("database.port", "APP_DATABASE_PORT")
+	viper.BindEnv("database.username", "APP_DATABASE_USERNAME")
+	viper.BindEnv("database.password", "APP_DATABASE_PASSWORD")
+	viper.BindEnv("database.name", "APP_DATABASE_NAME")
+
 }
 
 func SetDefault() {

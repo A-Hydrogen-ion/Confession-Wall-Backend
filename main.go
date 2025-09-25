@@ -54,6 +54,7 @@ func migrate(db *gorm.DB) { //数据库迁移及检查函数
 	}
 }
 func main() {
+	createUploadDirs()      // 创建必要的文件夹
 	config.InitViper()      //读取配置
 	database.ConnectDB()    // 连接数据库
 	if database.DB == nil { // 检查数据库连接是否成功
@@ -63,7 +64,6 @@ func main() {
 	authMiddleware := middleware.NewAuth(db)              //获取数据库实例并创建中间件
 	migrate(db)                                           // 自动迁移数据库
 	db.AutoMigrate(&model.Confession{}, &model.Comment{}) //处理model.go中新增的表结构和外键
-	createUploadDirs()                                    // 创建必要的文件夹
 	port := viper.GetInt("server.port")                   // 获取配置
 	host := viper.GetString("server.host")
 	if host == "" {

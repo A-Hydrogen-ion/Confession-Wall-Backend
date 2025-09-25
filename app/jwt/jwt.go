@@ -2,26 +2,28 @@ package jwt
 
 import (
 	"errors"
-	//"log"
+	"log"
 	"time"
 
-	//"os"
+	"os"
+
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var CustomSecret = []byte("114514")
+//var CustomSecret = []byte("114514")
 
-//var CustomSecret []byte
+var CustomSecret []byte
+
 // CustomSecret 用于加盐的字符串,暂时没有想好用时间当字符串还是在服务器内部使用openssl生成一个密钥并传入环境变量JWT_SECRET中
 // 在搞好逻辑关系之前，暂时使用不安全的文本当sercert
-/*func init() {
-    // 若使用生成的密钥，则应用启动时初始化密钥
-    secret := os.Getenv("JWT_SECRET")
-    if secret == "" {
-        log.Fatal("JWT_SECRET环境不存在！")
-    }
-    CustomSecret = []byte(secret)
-}*/
+func init() {
+	// 若使用生成的密钥，则应用启动时初始化密钥
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		log.Fatal("JWT_SECRET环境不存在！")
+	}
+	CustomSecret = []byte(secret)
+}
 
 type CustomClaims struct {
 	//我在这里加了自己申明的字段，这样你才能评鉴出这是我写的史
