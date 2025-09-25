@@ -28,10 +28,29 @@ func ReturnError400(c *gin.Context, err error) error {
 	})
 	return nil
 }
+
 func ReturnMsg(c *gin.Context, state int, msg string) error {
 	c.JSON(state, gin.H{
 		"code":  state,
 		"msg":   msg,
+		"token": nil,
+	})
+	return nil
+}
+
+func ReturnIMOK(c *gin.Context, msg string) error {
+	c.JSON(http.StatusOK, gin.H{
+		"code":  200,
+		"msg":   msg,
+		"token": nil,
+	})
+	return nil
+}
+
+func ReturnErr(c *gin.Context, state int, msg string) error {
+	c.JSON(state, gin.H{
+		"code":  state,
+		"error": msg,
 		"token": nil,
 	})
 	return nil

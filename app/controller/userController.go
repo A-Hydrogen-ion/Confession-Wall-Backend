@@ -99,27 +99,30 @@ func (userController *UserController) UploadAvatar(c *gin.Context) {
 	// 获取登录用户ID
 	userID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "你还没有登录喵~"})
+		ReturnErr(c, 401, "你还没有登录喵~")
 		return
 	}
 
 	path, err := service.UploadAvatar(c, userID.(uint))
 	if err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		ReturnError400(c, err)
 		return
 	}
 
 	// 更新用户资料表 avatar 字段
 	var user model.User
 	if err := userController.DB.First(&user, userID).Error; err != nil {
-		c.JSON(500, gin.H{"error": "获取用户失败，服务器娘不知道你是谁喵"})
+		ReturnErr(c, 500, "获取用户失败，服务器娘不知道你是谁喵")
 		return
 	}
 	user.Avatar = path
 	if err := userController.DB.Save(&user).Error; err != nil {
-		c.JSON(500, gin.H{"error": "服务器娘宕机了，她不小心把你的头像弄丢了"})
+		ReturnErr(c, 500, "服务器娘宕机了，她不小心把你的头像弄丢了")
 		return
 	}
-
-	c.JSON(200, gin.H{"msg": "服务器娘收到你上传的头像了喵~", "avatar": path})
+	c.JSON(http.StatusOK, gin.H{
+		"code":   200,
+		"avatar": path,
+		"msg":    "success",
+	})
 }
