@@ -19,6 +19,7 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 	authController := controller.NewAuthController(db) // 创建所有控制器实例
 	userController := controller.NewUserController(db)
 	confessionController := controller.CreateConfessionController(db)
+	blockController := controller.NewBlockController(db)
 	//路由设置
 	auth := config.Engine.Group("/api/auth") // 认证路由
 	{
@@ -44,7 +45,13 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			confession.POST("/comment", confessionController.AddComment)        // 发布评论（需要登录）
 			confession.DELETE("/comment", confessionController.DeleteComment)   // 删除评论（需要登录）
 			confession.GET("/list", confessionController.ListPublicConfessions) // 查看社区表白（无需登录）
-			confession.GET("/comments", confessionController.ListComments)      // 查看某条表白的评论（无需登录）
+			confession.GET("/comment", confessionController.ListComments)       // 查看某条表白的评论（无需登录）
+		}
+		block := api.Group("/blacklist")
+		{
+			block.POST("/add", blockController.BlockUser)
+			block.POST("/remove", blockController.UnblockUser)
+			block.GET("/list", blockController.GetBlockedUsers)
 		}
 	}
 	return config.Engine

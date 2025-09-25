@@ -126,9 +126,6 @@ func UploadAvatar(c *gin.Context, userID uint) (string, error) {
 
 	// 保存文件
 	saveDir := "uploads/avatars/"
-	if err := os.MkdirAll(saveDir, 0755); err != nil {
-		return "", fmt.Errorf("创建目录失败: %v", err)
-	}
 	//由于用户头像唯一，所以只采用用户ID作为文件名，这样用户上传的时候旧的头像会被自动覆写掉
 	savePath := fmt.Sprintf("%savatar_%d%s", saveDir, userID, ext)
 	out, err := os.Create(savePath)
