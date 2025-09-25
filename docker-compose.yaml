@@ -15,7 +15,7 @@ services:
     depends_on:
       - db
     volumes:
-      - ./uploads:/app/confession-wall/uploads  # 持久化上传的图片
+      - ./uploads:/app/uploads  # 持久化上传的图片
       - ./config:/app/config  # 配置文件
 
   db:
