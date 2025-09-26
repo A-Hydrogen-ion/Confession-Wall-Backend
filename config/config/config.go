@@ -43,8 +43,8 @@ func setupConfigFile() {
 	viper.SetConfigName("config") // 设置配置文件名称
 	viper.SetConfigType("yaml")   // 设置配置文件类型
 	// 添加配置文件搜索路径
-	viper.AddConfigPath(".")        // 当前目录
-	viper.AddConfigPath("./config") // 其他搜索路径
+	viper.AddConfigPath(".")      // 当前目录
+	viper.AddConfigPath("./data") // 其他搜索路径
 	readConfig()
 	checkConfig()
 }

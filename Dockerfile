@@ -13,7 +13,7 @@ VOLUME /data
 WORKDIR /app
 COPY --from=builder /app/confession-wall .
 COPY entrypoint.sh /entrypoint.sh
-RUN mkdir -p /app/uploads && mkdir -p /app/config && chmod +x /entrypoint.sh
+RUN mkdir -p /app/uploads && mkdir -p /app/data && chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 
 EXPOSE 8080

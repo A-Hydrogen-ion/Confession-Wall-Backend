@@ -16,7 +16,7 @@ services:
       - db
     volumes:
       - ./uploads:/app/uploads  # 持久化上传的图片
-      - ./config:/app/config  # 配置文件
+      - ./data:/app/data  # 配置文件
 
   db:
     image: mysql:latest
