@@ -34,7 +34,7 @@ Confession-Wall-Backend/<br>
 ### 扩展的功能
 - [x] 在docker环境下构建镜像运行以方便全平台部署
 - [x] 成功部署到云端服务器，不依赖dokcer环境
-- [] 使用https进行访问
+- [ ] 使用https进行访问
 
 > 注：以上为代码中可见并已实现的功能，仍建议进一步完善输入校验、并发冲突处理与测试覆盖。
 
@@ -75,7 +75,7 @@ services:
       - db
     volumes:
       - ./uploads:/app/uploads  # 持久化上传的图片
-      - ./config:/app/config  # 配置文件和环境变量二选一
+      - ./data:/app/data  # 配置文件和环境变量二选一
 
   db:
     image: mysql:latest
