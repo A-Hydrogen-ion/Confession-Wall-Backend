@@ -79,7 +79,7 @@ func main() {
 	addr := fmt.Sprintf("%s:%d", host, port)
 	log.Printf("服务启动在 :%s", addr)
 	go database.HealthMonitor(30 * time.Second) // 每30秒检查一次数据库是否还活着
-	if err := r.Run(addr); err != nil { // 启动服务器
+	if err := r.Run(addr); err != nil {         // 启动服务器
 		log.Fatalf("服务启动失败啦！: %v", err)
 	}
 }
