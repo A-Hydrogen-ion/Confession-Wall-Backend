@@ -1,6 +1,7 @@
 package model
 
 import (
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -33,10 +34,15 @@ type Confession struct {
 
 // 评论数据类型
 type Comment struct {
-	ID        uint      `gorm:"primaryKey"`
-	UserID    uint      `gorm:"not null" json:"userId"`
-	Content   string    `gorm:"type:text;not null" json:"content"`
-	CreatedAt time.Time `gorm:"column:createdAt;not null" json:"createdAt"`
+	ID           uint      `gorm:"primaryKey"`
+	UserID       uint      `gorm:"not null" json:"userId"`
+	ConfessionID uint      `gorm:"not null;index" json:"confessionId"` // 来自表白数据类型的外键字段，以让评论和表白绑定在一起，同时在main.go中添加自动迁移来让gorm知道这个表结构和外键
+	Content      string    `gorm:"type:text;not null" json:"content"`
+	CreatedAt    time.Time `gorm:"column:createdAt;not null" json:"createdAt"`
+	User         User      `gorm:"foreignKey:UserID" json:"user"` // 建立来自user的外键关系（GORM 会自动生成约束）
+
+	Confession Confession `gorm:"foreignKey:ConfessionID;constraint:OnDelete:CASCADE;" json:"-"`
+	// 建立外键关系（GORM 会自动生成约束）,默认情况下，任何模型的主键字段都是 ID，所以不需要加references来指向confession的ID
 }
 
 // 小黑屋数据类型
@@ -49,14 +55,23 @@ type Block struct {
 
 // 创建用户前哈希密码钩子
 func (u *User) BeforeSave(tx *gorm.DB) error {
-	if len(u.Password) > 0 {
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
-		if err != nil {
-			return err
-		}
-		u.Password = string(hashedPassword)
+	if len(u.Password) == 0 || isBcryptHash(u.Password) { //如果已经hash过了则跳过hash
+		return nil
 	}
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	u.Password = string(hashedPassword)
 	return nil
+}
+
+// 判断字符串是否看起来像 bcrypt 的 hash
+func isBcryptHash(s string) bool {
+	if len(s) != 60 {
+		return false
+	}
+	return strings.HasPrefix(s, "$2a$") || strings.HasPrefix(s, "$2b$") || strings.HasPrefix(s, "$2y$")
 }
 
 // 创建用户前创建检查钩子

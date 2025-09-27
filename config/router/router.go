@@ -16,68 +16,48 @@ type RouterConfig struct {
 
 func SetupRouter(config *RouterConfig) *gin.Engine {
 	db := config.DB
-	// 创建所有控制器实例
-	authController := controller.NewAuthController(db)
+	authController := controller.NewAuthController(db) // 创建所有控制器实例
+	userController := controller.NewUserController(db)
 	confessionController := controller.CreateConfessionController(db)
-
-	// 认证路由
-	auth := config.Engine.Group("/api/auth")
+	blockController := controller.NewBlockController(db)
+	//路由设置
+	auth := config.Engine.Group("/api/auth") // 认证路由
 	{
 		auth.POST("/register", authController.Register)
 		auth.POST("/login", authController.Login)
 	}
-	//路由设置
-	//需要jwt认证的API公共路由
-	api := config.Engine.Group("/api")
-	api.Use(authController.JWTMiddleware())
+	// 公共的 confession 路由（无需登录）
+	publicConfession := config.Engine.Group("/api/confession")
 	{
-		// 用户相关路由可以在这里添加
+		publicConfession.GET("/list", confessionController.ListPublicConfessions) // 查看社区表白（无需登录）
+		publicConfession.GET("/comment", confessionController.ListComments)       // 查看某条表白的评论（无需登录）
+	}
+	var m middleware.Auth
+	m = *middleware.NewAuth(db)
+	api := config.Engine.Group("/api")
+	api.Use(middleware.JWTMiddleware(m)) //需要jwt认证的API公共路由
+	{                                    // 用户相关路由可以在这里添加
 		user := api.Group("/user")
 		{
 			user.GET("/profile", authController.GetMyProfile)
-			// user.PUT("/user/profile", controller.UpdateUserProfile) //更新用户信息
+			user.PUT("/profile", authController.UpdateUserProfile) //更新用户信息
+			user.PUT("/avatar", userController.UploadAvatar)
 			// user.PUT("/user/password", controller.UpdateUserPassword)     //修改密码
 		}
+		// 受保护的 confession 路由（需要登录）
+		privateConfession := api.Group("/confession")
+		{
+			privateConfession.POST("/post", confessionController.CreateConfession)   // 发布表白（需要登录），上传图片已经集成到了controller里
+			privateConfession.POST("/update", confessionController.UpdateConfession) // 修改表白（需要登录）
+			privateConfession.POST("/comment", confessionController.AddComment)      // 发布评论（需要登录）
+			privateConfession.DELETE("/comment", confessionController.DeleteComment) // 删除评论（需要登录）
+		}
+		block := api.Group("/blacklist")
+		{
+			block.POST("/add", blockController.BlockUser)
+			block.POST("/remove", blockController.UnblockUser)
+			block.GET("/list", blockController.GetBlockedUsers)
+		}
 	}
-	{
-		//public.POST("/register", controllers.Register)
-		//public.POST("/login", controllers.Login)
-	}
-
-	// 受保护的路由
-	// protected := r.Group("/api")
-	// protected.Use(middleware.AuthMiddleware())//改用jwt认证，此处需修改
-	{
-
-		// protected.POST("/upload/image", controller.UploadImage)            //上传图片
-		// protected.DELETE("/upload/image/{imageId}", controller.DelImage)   //删除图片
-		// protected.POST("/confessions", controller.PostConfession)          //发布表白
-		// protected.GET("/confessions", controller.GetConfession)            //获取表白列表（社区）
-		// protected.GET("/confessions/my", controller.GetMyConfession)       //获取个人表白列表
-		// protected.GET("/confessions/{id}", controller.GetCOnfessionDetail) //获取表白详情
-		// protected.PUT("/confessions/{id}", controller.UpdateConfession)    //更新表白
-		// protected.POST("/comments", controller.PostComment)                //发表评论
-		// protected.GET("/comments", controller.GetComment)                  //获取评论列表
-		// protected.DELETE("/comments/{id}", controller.DelComment)          //删除评论
-		// protected.POST("/blacklist", controller.BlacklistUser)             //拉黑用户
-		// protected.POST("/blacklist/{userId}", controller.Unblock)          //取消拉黑
-		// protected.GET("api/blacklist", controller.GetBlackList)            //获取拉黑列表
-	}
-
-	// 表白相关路由
-	confession := config.Engine.Group("/api/confession")
-	{
-		// 发布表白（需要登录），上传图片已经集成到了controller里
-		confession.POST("/post", authController.JWTMiddleware(), confessionController.CreateConfession)
-		// 修改表白（需要登录）
-		confession.POST("/update", authController.JWTMiddleware(), confessionController.UpdateConfession)
-		// 发布评论（需要登录）
-		confession.POST("/comment", authController.JWTMiddleware(), confessionController.AddComment)
-		// 查看社区表白（无需登录）
-		confession.GET("/list", confessionController.ListPublicConfessions)
-		// 查看某条表白的评论（无需登录）
-		confession.GET("/comments", confessionController.ListComments)
-	}
-
 	return config.Engine
 }

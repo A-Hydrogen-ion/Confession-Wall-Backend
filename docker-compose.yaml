@@ -1,0 +1,31 @@
+services:
+  app:
+    image: confession-wall:latest
+    container_name: confession-wall
+    restart: unless-stopped
+    ports:
+      - "8080:8080"   # 宿主机 8080 映射到容器 8080
+    environment:
+      #JWT_SECRET: "${JWT_SECRET}"        # 可在 .env 文件或宿主机传入
+      APP_DATABASE_HOST: 192.168.2.6
+      APP_DATABASE_PORT: 3306
+      APP_DATABASE_USERNAME: root
+      APP_DATABASE_PASSWORD: rootpassword
+      APP_DATABASE_NAME: confession
+    depends_on:
+      - db
+    volumes:
+      - ./uploads:/app/uploads  # 持久化上传的图片
+      - ./data:/app/data  # 配置文件
+
+  db:
+    image: mysql:latest
+    container_name: confession-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: confession
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./db_data:/var/lib/mysql  # 持久化数据库
