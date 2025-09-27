@@ -51,7 +51,7 @@ Confession-Wall-Backend/<br>
 ```bash
 git clone git@github.com:A-Hydrogen-ion/Confession-Wall-Backend.git
 ```
-3. 转到项目文件夹根目录，执行`docker bulld`命令
+3. 转到项目文件夹根目录，执行`docker build`命令
 ```bash
 docker build -t confession-wall:latest .
 ```
