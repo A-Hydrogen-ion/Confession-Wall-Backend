@@ -69,11 +69,6 @@ func main() {
 	if host == "" {
 		host = "0.0.0.0" // 默认监听来自所有地址的请求
 	}
-	if _, err := os.Stat("uploads"); os.IsNotExist(err) { // 创建图片存储目录 uploads（如不存在则自动创建）
-		if err := os.Mkdir("uploads", os.ModePerm); err != nil {
-			log.Fatalf("创建图片目录失败: %v", err)
-		}
-	}
 	r := gin.Default()                    // 创建 Gin 引擎
 	routerConfig := &routes.RouterConfig{ // 设置路由来配合router中的模块设计
 		Engine:     r,
