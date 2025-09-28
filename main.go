@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	middleware "github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/middleware"
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/model"
@@ -45,7 +44,8 @@ func hel() *gorm.DB { // 数据库健康检查
 	return db
 }
 func migrate(db *gorm.DB) { //数据库迁移及检查函数
-	err := db.AutoMigrate(&model.User{}, &model.Confession{}, &model.Comment{}, &model.Block{})
+	err := db.AutoMigrate(&model.User{})
+	err = db.AutoMigrate(&model.Confession{}, &model.Comment{}, &model.Block{})
 	if err != nil {
 		log.Printf("数据库迁移失败: %v", err)
 	}
@@ -77,8 +77,8 @@ func main() {
 	r = routes.SetupRouter(routerConfig)
 	addr := fmt.Sprintf("%s:%d", host, port)
 	log.Printf("服务启动在 :%s", addr)
-	go database.HealthMonitor(30 * time.Second) // 每30秒检查一次数据库是否还活着
-	if err := r.Run(addr); err != nil {         // 启动服务器
+	//go database.HealthMonitor(30 * time.Second) // 每30秒检查一次数据库是否还活着
+	if err := r.Run(addr); err != nil { // 启动服务器
 		log.Fatalf("服务启动失败啦！: %v", err)
 	}
 }
