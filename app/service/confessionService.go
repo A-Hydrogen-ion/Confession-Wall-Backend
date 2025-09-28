@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/model"
@@ -33,7 +32,6 @@ func ListPublicConfessions(db *gorm.DB, currentUserID uint) ([]model.Confession,
 	db.Model(&model.Block{}).Where("blocked_id = ?", currentUserID).Pluck("user_id", &blockedByIDs)
 	// 合并两个列表
 	excludeIDs := append(blockedIDs, blockedByIDs...)
-	fmt.Println("currentUserID:", currentUserID, "excludeIDs:", excludeIDs) //测试用
 	var confessions []model.Confession
 	query := db.Where("private = ?", false) //不展示私密表白
 	// 如果有需要排除的用户ID，则添加条件
@@ -59,6 +57,34 @@ func UpdateConfession(db *gorm.DB, confessionID uint, newContent string, newImag
 // 删除表白
 func DeleteConfession(db *gorm.DB, confessionID uint) error {
 	return db.Delete(&model.Confession{}, confessionID).Error
+}
+
+// 根据ID获取单条表白
+func GetConfessionByID(db *gorm.DB, confessionID uint) (model.Confession, error) {
+	var confession model.Confession
+	err := db.First(&confession, confessionID).Error
+	return confession, err
+}
+
+// 获取某用户的所有表白（排除黑名单）
+func GetUserConfessions(db *gorm.DB, targetUserID uint, currentUserID uint) ([]model.Confession, error) {
+	var blockedIDs []uint
+	var blockedByIDs []uint
+	//熟悉的配方…………
+	// 当前用户拉黑的
+	db.Model(&model.Block{}).Where("user_id = ?", currentUserID).Pluck("blocked_id", &blockedIDs)
+	// 拉黑了当前用户的
+	db.Model(&model.Block{}).Where("blocked_id = ?", currentUserID).Pluck("user_id", &blockedByIDs)
+	// 合并两个列表
+	excludeIDs := append(blockedIDs, blockedByIDs...)
+
+	var confessions []model.Confession
+	query := db.Where("user_id = ? AND private = ?", targetUserID, false) // 排除私密表白
+	if len(excludeIDs) > 0 {
+		query = query.Where("user_id NOT IN ?", excludeIDs)
+	}
+	err := query.Find(&confessions).Error
+	return confessions, err
 }
 
 // 添加评论

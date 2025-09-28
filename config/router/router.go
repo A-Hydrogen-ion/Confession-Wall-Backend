@@ -21,7 +21,8 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 	confessionController := controller.CreateConfessionController(db)
 	blockController := controller.NewBlockController(db)
 	//路由设置
-	auth := config.Engine.Group("/api/auth") // 认证路由
+	config.Engine.Static("/uploads", "./uploads") // 静态文件服务，用于给前端展示图片
+	auth := config.Engine.Group("/api/auth")      // 认证路由
 	{
 		auth.POST("/register", authController.Register)
 		auth.POST("/login", authController.Login)
@@ -33,6 +34,7 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 	{
 		publicConfession.GET("/list", middleware.OptionalJWTMiddleware(m), confessionController.ListPublicConfessions) // 查看社区表白（可选认证）
 		publicConfession.GET("/comment", middleware.OptionalJWTMiddleware(m), confessionController.ListComments)       // 查看某条表白的评论（可选认证）
+		publicConfession.GET("/detail", middleware.OptionalJWTMiddleware(m), confessionController.GetConfessionByID)   // 根据ID获取表白（可选认证）
 	}
 
 	api := config.Engine.Group("/api")
