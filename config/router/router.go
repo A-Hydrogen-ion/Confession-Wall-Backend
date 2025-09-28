@@ -26,14 +26,15 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 		auth.POST("/register", authController.Register)
 		auth.POST("/login", authController.Login)
 	}
-	// 公共的 confession 路由（无需登录）
-	publicConfession := config.Engine.Group("/api/confession")
-	{
-		publicConfession.GET("/list", confessionController.ListPublicConfessions) // 查看社区表白（无需登录）
-		publicConfession.GET("/comment", confessionController.ListComments)       // 查看某条表白的评论（无需登录）
-	}
+	// 公共的 confession 路由（可选认证，仅list和comment）
 	var m middleware.Auth
 	m = *middleware.NewAuth(db)
+	publicConfession := config.Engine.Group("/api/confession")
+	{
+		publicConfession.GET("/list", middleware.OptionalJWTMiddleware(m), confessionController.ListPublicConfessions) // 查看社区表白（可选认证）
+		publicConfession.GET("/comment", middleware.OptionalJWTMiddleware(m), confessionController.ListComments)       // 查看某条表白的评论（可选认证）
+	}
+
 	api := config.Engine.Group("/api")
 	api.Use(middleware.JWTMiddleware(m)) //需要jwt认证的API公共路由
 	{                                    // 用户相关路由可以在这里添加

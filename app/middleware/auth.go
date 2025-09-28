@@ -90,3 +90,24 @@ func tokenCheck(c *gin.Context, authHeader string) *jwt.CustomClaims { //检查�
 	}
 	return claims
 }
+
+// 太好了，原来是预留了接口但是啥也没写
+// OptionalJWTMiddleware 可选JWT认证中间件：有token就解析，无token直接放行
+func OptionalJWTMiddleware(m Auth) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authHeader := c.Request.Header.Get("Authorization")
+		if authHeader != "" && strings.HasPrefix(authHeader, "Bearer ") {
+			tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+			tokenString = strings.TrimSpace(tokenString)
+			claims, err := jwt.ParseToken(tokenString)
+			if err == nil {
+				// token合法，注入user_id等
+				c.Set("user_id", claims.UserID)
+				c.Set("username", claims.Username)
+				c.Set("user_claims", claims)
+			}
+			// token不合法就啥也不做，直接放行
+		}
+		c.Next()
+	}
+}

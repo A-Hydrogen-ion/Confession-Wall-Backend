@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/model"
@@ -32,6 +33,7 @@ func ListPublicConfessions(db *gorm.DB, currentUserID uint) ([]model.Confession,
 	db.Model(&model.Block{}).Where("blocked_id = ?", currentUserID).Pluck("user_id", &blockedByIDs)
 	// 合并两个列表
 	excludeIDs := append(blockedIDs, blockedByIDs...)
+	fmt.Println("currentUserID:", currentUserID, "excludeIDs:", excludeIDs) //测试用
 	var confessions []model.Confession
 	query := db.Where("private = ?", false) //不展示私密表白
 	// 如果有需要排除的用户ID，则添加条件
