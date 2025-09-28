@@ -249,7 +249,7 @@ func (ctrl *ConfessionController) ListComments(c *gin.Context) {
 func (ctrl *ConfessionController) GetConfessionByID(c *gin.Context) {
 	confessionID, err := QueryUint(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ReturnError400(c, err)
 		return
 	}
 	confession, err := service.GetConfessionByID(ctrl.DB, confessionID)
@@ -273,12 +273,12 @@ func (ctrl *ConfessionController) GetUserConfessions(c *gin.Context) {
 	}
 	targetUserID, err := QueryUint(c, "user_id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ReturnError400(c, err)
 		return
 	}
 	confessions, err := service.GetUserConfessions(ctrl.DB, targetUserID, currentUserID.(uint))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取失败了喵"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "服务器娘宕机了,获取TA的表白失败了喵"})
 		return
 	}
 	for i := range confessions {

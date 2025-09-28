@@ -59,12 +59,12 @@ func ParseToken(tokenString string) (*CustomClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (i interface{}, err error) {
 		return CustomSecret, nil // 返回用于验证的密钥
 	})
-	// 验证token有效性（包括过期时间等）
-	if token.Valid { // 校验token
-		return claims, nil
-	}
 	if err != nil {
 		return nil, err
 	}
-	return nil, errors.New("invalid token")
+	if token == nil || !token.Valid {
+		// token无效或已过期和非法的token全部报告无效，防止继续执行访问本就为空的claims造成空指针panic
+		return nil, errors.New("invalid token")
+	}
+	return claims, nil
 }

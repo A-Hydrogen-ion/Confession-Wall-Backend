@@ -54,6 +54,7 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			privateConfession.POST("/update", confessionController.UpdateConfession) // 修改表白（需要登录）
 			privateConfession.POST("/comment", confessionController.AddComment)      // 发布评论（需要登录）
 			privateConfession.DELETE("/comment", confessionController.DeleteComment) // 删除评论（需要登录）
+			privateConfession.GET("/user", confessionController.GetUserConfessions)  // 获取某用户所有表白（需要登录）
 		}
 		block := api.Group("/blacklist")
 		{
