@@ -1,7 +1,3 @@
-# Confession-Wall-Backend <br>
-this is a ~~4 group mates~~ 4 bammers' homework   <br>
-
-## 项目结构： <br>
 # Confession Wall — Backend
 this is a ~~4 group mates~~ 4 bammers' homework    <br>
 这是一个用 Go（Gin + GORM）实现的匿名表白墙后端服务，提供用户注册/登录、发表/管理表白、评论、图片上传、拉黑等功能。
@@ -32,16 +28,13 @@ Confession-Wall-Backend/    <br>
 - [x] 评论功能：添加/查看/删除评论（`app/controller/confessionController.go`）
 - [x] 拉黑功能：拉黑/取消拉黑/查看拉黑列表（`app/controller/blockController.go`）
 - [x] 表白带图：支持多图上传，限制最多 9 张
+
 等待与前端对接中……
 
 ### 扩展的功能
 - [x] 在docker环境下构建镜像运行以方便全平台部署
 - [x] 成功部署到云端服务器，不依赖dokcer环境
 - [ ] 使用https进行访问
-
-> 注：以上为代码中可见并已实现的功能，仍建议进一步完善输入校验、并发冲突处理与测试覆盖。
-
-## 扩展功能
 
 ## 本地运行
 
