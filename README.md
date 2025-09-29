@@ -21,30 +21,6 @@ Confession-Wall-Backend/    <br>
 │   └── utils/             # 各类工具   <br>
 └── README.md                <br>
 
-## 待完成的任务：
-- [ ] 实现个人页面，能够修改昵称和设置自己上传的图片作为头像，账号、登陆密码等信息
-- [ ] 可以发布一条表白，且能够选择是否匿名以及是否公开（仅自己可见）
-- [ ] 能够管理自己的表白（修改、删除等）
-- [ ] 实现社区功能，能看到别人发的表白（注意实名和匿名）
-- [ ] 实现拉黑功能（看不到拉黑人所发的表白）
-- [ ] 用户上传的图片只能在后端存储，不借助外部图床服务
-- [ ] 实现表白消息的评论和回复评论的功能
-- [ ] 表白带图（最高九张）
-Confession-Wall-Backend/<br>
-├── main.go                 # 程序入口<br>
-├── go.mod                  # Go 模块文件<br>
-├── config/                 # 配置与路由<br>
-│   ├── config.example.yaml # 配置示例<br>
-│   └── router/             # 路由配置<br>
-├── app/                    # 应用代码<br>
-│   ├── model/              # 数据模型<br>
-│   ├── service/            # 业务逻辑<br>
-│   ├── controller/         # 控制器（HTTP handler）<br>
-│   ├── middleware/         # 中间件（JWT 等）<br>
-│   └── jwt/                # JWT 工具<br>
-└── README.md<br>
-
-等待与前端对接中……
 
 ## 功能实现状态（当前）
 
@@ -56,6 +32,7 @@ Confession-Wall-Backend/<br>
 - [x] 评论功能：添加/查看/删除评论（`app/controller/confessionController.go`）
 - [x] 拉黑功能：拉黑/取消拉黑/查看拉黑列表（`app/controller/blockController.go`）
 - [x] 表白带图：支持多图上传，限制最多 9 张
+等待与前端对接中……
 
 ### 扩展的功能
 - [x] 在docker环境下构建镜像运行以方便全平台部署
@@ -115,7 +92,16 @@ services:
     volumes:
       - ./db_data:/var/lib/mysql  # 持久化数据库
 ```
-5. 执行`docker compose up`即可
+4. 在dockercompose文件夹同目录下创建`uploads`和`data`与`db_data`文件夹持久化存放数据
+```bash
+mkdir uploads data db_data
+```
+5. （可选）将config.yaml配置文件拷贝到`data`目录下，配置文件比环境变量有更高的优先级
+```bash
+cp /path/to/yourproject/config/config.example.yaml config.yaml
+```
+
+6. 执行`docker compose up`即可
 ### 手动编译部署
 
 1. 安装依赖：

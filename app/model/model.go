@@ -36,7 +36,7 @@ type Confession struct {
 type Comment struct {
 	ID           uint      `gorm:"primaryKey"`
 	UserID       uint      `gorm:"not null" json:"userId"`
-	ConfessionID uint      `gorm:"not null;index" json:"confessionId"` // 来自表白数据类型的外键字段，以让评论和表白绑定在一起，同时在main.go中添加自动迁移来让gorm知道这个表结构和外键
+	ConfessionID uint      `gorm:"not null;index" json:"confession_id"` // 来自表白数据类型的外键字段，以让评论和表白绑定在一起，同时在main.go中添加自动迁移来让gorm知道这个表结构和外键
 	Content      string    `gorm:"type:text;not null" json:"content"`
 	CreatedAt    time.Time `gorm:"column:createdAt;not null" json:"createdAt"`
 	User         User      `gorm:"foreignKey:UserID" json:"user"` // 建立来自user的外键关系（GORM 会自动生成约束）
