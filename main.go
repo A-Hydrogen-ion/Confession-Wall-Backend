@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	middleware "github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/middleware"
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/model"
@@ -46,6 +45,7 @@ func hel() *gorm.DB { // 数据库健康检查
 }
 func migrate(db *gorm.DB) { //数据库迁移及检查函数
 	err := db.AutoMigrate(&model.User{})
+	err = db.AutoMigrate(&model.Confession{}, &model.Comment{}, &model.Block{})
 	if err != nil {
 		log.Printf("数据库迁移失败: %v", err)
 	}
@@ -60,11 +60,10 @@ func main() {
 	if database.DB == nil { // 检查数据库连接是否成功
 		log.Fatal("数据库连接失败，程序退出") //使用Fatal以使程序自动结束
 	}
-	db := hel()                                           //健康检查
-	authMiddleware := middleware.NewAuth(db)              //获取数据库实例并创建中间件
-	migrate(db)                                           // 自动迁移数据库
-	db.AutoMigrate(&model.Confession{}, &model.Comment{}) //处理model.go中新增的表结构和外键
-	port := viper.GetInt("server.port")                   // 获取配置
+	db := hel()                              //健康检查
+	authMiddleware := middleware.NewAuth(db) //获取数据库实例并创建中间件
+	migrate(db)                              // 自动迁移数据库
+	port := viper.GetInt("server.port")      // 获取配置
 	host := viper.GetString("server.host")
 	if host == "" {
 		host = "0.0.0.0" // 默认监听来自所有地址的请求
@@ -78,8 +77,8 @@ func main() {
 	r = routes.SetupRouter(routerConfig)
 	addr := fmt.Sprintf("%s:%d", host, port)
 	log.Printf("服务启动在 :%s", addr)
-	go database.HealthMonitor(30 * time.Second) // 每30秒检查一次数据库是否还活着
-	if err := r.Run(addr); err != nil {         // 启动服务器
+	//go database.HealthMonitor(30 * time.Second) // 每30秒检查一次数据库是否还活着
+	if err := r.Run(addr); err != nil { // 启动服务器
 		log.Fatalf("服务启动失败啦！: %v", err)
 	}
 }

@@ -2,6 +2,7 @@ package controller
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"strconv"
@@ -130,7 +131,10 @@ func (ctrl *ConfessionController) ListPublicConfessions(c *gin.Context) {
 	var uid uint = 0
 	// 获取当前用户ID，若未登录则为0，这样做可以让未登录用户也能看到公共表白
 	if userID, exists := c.Get("user_id"); exists {
+		// 调试输出
+		fmt.Printf("[ListPublicConfessions] exists=true, userID=%d\n", userID)
 		uid = userID.(uint)
+		fmt.Printf("[ListPublicConfessions] uid=%d\n", uid)
 	}
 	confessions, err := service.ListPublicConfessions(ctrl.DB, uid)
 	if err != nil {
@@ -147,7 +151,7 @@ func (ctrl *ConfessionController) ListPublicConfessions(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"code": 200,
 		"data": confessions,
-		"msg":  "success",
+		"msg":  "获取成功了喵~",
 	})
 }
 
@@ -237,6 +241,50 @@ func (ctrl *ConfessionController) ListComments(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"code": 200,
 		"data": comments,
-		"msg":  "success",
+		"msg":  "获取评论成功了喵~",
 	})
+}
+
+// 根据ID获取单条表白
+func (ctrl *ConfessionController) GetConfessionByID(c *gin.Context) {
+	confessionID, err := QueryUint(c, "id")
+	if err != nil {
+		ReturnError400(c, err)
+		return
+	}
+	confession, err := service.GetConfessionByID(ctrl.DB, confessionID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "没有找到这条表白喵~"})
+		return
+	}
+	// 匿名处理
+	if confession.Anonymous {
+		confession.UserID = 0
+	}
+	c.JSON(http.StatusOK, gin.H{"data": confession})
+}
+
+// 获取某用户的所有表白（需登录，排除黑名单和私密）
+func (ctrl *ConfessionController) GetUserConfessions(c *gin.Context) {
+	currentUserID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "你需要登录才能查看哦喵~"})
+		return
+	}
+	targetUserID, err := QueryUint(c, "user_id")
+	if err != nil {
+		ReturnError400(c, err)
+		return
+	}
+	confessions, err := service.GetUserConfessions(ctrl.DB, targetUserID, currentUserID.(uint))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "服务器娘宕机了,获取TA的表白失败了喵"})
+		return
+	}
+	for i := range confessions {
+		if confessions[i].Anonymous {
+			confessions[i].UserID = 0
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{"data": confessions})
 }

@@ -21,19 +21,22 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 	confessionController := controller.CreateConfessionController(db)
 	blockController := controller.NewBlockController(db)
 	//路由设置
-	auth := config.Engine.Group("/api/auth") // 认证路由
+	config.Engine.Static("/uploads", "./uploads") // 静态文件服务，用于给前端展示图片
+	auth := config.Engine.Group("/api/auth")      // 认证路由
 	{
 		auth.POST("/register", authController.Register)
 		auth.POST("/login", authController.Login)
 	}
-	// 公共的 confession 路由（无需登录）
-	publicConfession := config.Engine.Group("/api/confession")
-	{
-		publicConfession.GET("/list", confessionController.ListPublicConfessions) // 查看社区表白（无需登录）
-		publicConfession.GET("/comment", confessionController.ListComments)       // 查看某条表白的评论（无需登录）
-	}
+	// 公共的 confession 路由（可选认证，仅list和comment）
 	var m middleware.Auth
 	m = *middleware.NewAuth(db)
+	publicConfession := config.Engine.Group("/api/confession")
+	{
+		publicConfession.GET("/list", middleware.OptionalJWTMiddleware(m), confessionController.ListPublicConfessions) // 查看社区表白（可选认证）
+		publicConfession.GET("/comment", middleware.OptionalJWTMiddleware(m), confessionController.ListComments)       // 查看某条表白的评论（可选认证）
+		publicConfession.GET("/detail", middleware.OptionalJWTMiddleware(m), confessionController.GetConfessionByID)   // 根据ID获取表白（可选认证）
+	}
+
 	api := config.Engine.Group("/api")
 	api.Use(middleware.JWTMiddleware(m)) //需要jwt认证的API公共路由
 	{                                    // 用户相关路由可以在这里添加
@@ -51,6 +54,7 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			privateConfession.POST("/update", confessionController.UpdateConfession) // 修改表白（需要登录）
 			privateConfession.POST("/comment", confessionController.AddComment)      // 发布评论（需要登录）
 			privateConfession.DELETE("/comment", confessionController.DeleteComment) // 删除评论（需要登录）
+			privateConfession.GET("/user", confessionController.GetUserConfessions)  // 获取某用户所有表白（需要登录）
 		}
 		block := api.Group("/blacklist")
 		{

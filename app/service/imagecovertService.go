@@ -7,6 +7,7 @@ import (
 	"image/draw"
 	"image/jpeg"
 	"image/png"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -67,6 +68,12 @@ func UploadImages(c *gin.Context, userID uint) ([]string, error) {
 			return nil, fmt.Errorf("服务器娘说图片保存失败惹: %v", err)
 		}
 		file.Seek(0, 0)
+		// 写入内容
+		if _, err := io.Copy(out, file); err != nil {
+			out.Close()
+			file.Close()
+			return nil, fmt.Errorf("图片写入失败: %v", err)
+		}
 		out.Close()
 		file.Close()
 		imagePaths = append(imagePaths, savePath)

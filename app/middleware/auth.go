@@ -26,6 +26,9 @@ func NewAuth(db *gorm.DB) *Auth {
 func JWTMiddleware(m Auth) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		claims := tokenCheck(c, authHeaderCheck(c))
+		if claims == nil { // 这里必须加，以防止传入错误的token继续执行访问本就为空的claims造成空指针panic
+			return
+		}
 		// 查询数据库验证用户是否存在
 		var user model.User
 		result := m.db.First(&user, claims.UserID)
@@ -83,10 +86,31 @@ func tokenCheck(c *gin.Context, authHeader string) *jwt.CustomClaims { //检查�
 		return nil
 	}
 	claims, err := jwt.ParseToken(tokenString)
-	if err != nil { //token无效或已过期
+	if err != nil || claims == nil { // token无效或已过期和非法的token全部报告无效，防止继续执行造成空指针panic
 		controller.ReturnMsg(c, http.StatusUnauthorized, "token无效或已过期了喵")
 		c.Abort()
 		return nil
 	}
 	return claims
+}
+
+// 太好了，原来是预留了接口但是啥也没写
+// OptionalJWTMiddleware 可选JWT认证中间件：有token就解析，无token直接放行
+func OptionalJWTMiddleware(m Auth) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authHeader := c.Request.Header.Get("Authorization")
+		if authHeader != "" && strings.HasPrefix(authHeader, "Bearer ") {
+			tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+			tokenString = strings.TrimSpace(tokenString)
+			claims, err := jwt.ParseToken(tokenString)
+			if err == nil && claims != nil { //加一层判断以防止出现传入的非法token没有被解析访问空claims产生空指针导致panic
+				// token合法，注入user_id等
+				c.Set("user_id", claims.UserID)
+				c.Set("username", claims.Username)
+				c.Set("user_claims", claims)
+			}
+			// token不合法就啥也不做，直接放行
+		}
+		c.Next()
+	}
 }

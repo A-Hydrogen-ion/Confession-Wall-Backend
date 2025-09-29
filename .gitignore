@@ -1,2 +1,5 @@
 # 忽略真实配置文件
 config.yaml
+db_data/
+uploads/
+data/

@@ -25,7 +25,7 @@ type Confession struct {
 	ID          uint      `gorm:"primaryKey"`
 	UserID      uint      `gorm:"not null" json:"userId"`
 	Content     string    `gorm:"type:text;not null" json:"content"`
-	Images      []string  `gorm:"type:json" json:"images"`
+	Images      []string  `gorm:"type:json;serializer:json" json:"images"`
 	Anonymous   bool      `gorm:"not null" json:"Anonymous"`
 	Private     bool      `gorm:"not null" json:"Private"`
 	PublishedAt time.Time `gorm:"column:publishedAt;not null" json:"publishedAt"`
