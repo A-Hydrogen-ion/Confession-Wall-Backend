@@ -99,7 +99,7 @@ func (u *User) CheckPassword(password string) error {
 
 // 注册相关
 type RegisterRequest struct {
-	Username string `json:"username"   binding:"required,min=3,max=10"`
+	Username string `json:"username"   binding:"required,min=3,max=15"`
 	Nickname string `json:"Nickname"   binding:"required,min=2"`
 	Password string `json:"password"   binding:"required,min=8,max=16"`
 } //RegisterRequest结构体将用于处理用户注册请求的数据绑定和验证

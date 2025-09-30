@@ -2,17 +2,17 @@ package jwt
 
 import (
 	"errors"
-	"log"
+	//"log"
 	"time"
 
-	"os"
+	//"os"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-//var CustomSecret = []byte("114514")
+var CustomSecret = []byte("114514")
 
-
+/*
 var CustomSecret []byte
 
 // CustomSecret 用于加盐的字符串,暂时没有想好用时间当字符串还是在服务器内部使用openssl生成一个密钥并传入环境变量JWT_SECRET中
@@ -26,7 +26,7 @@ var CustomSecret []byte
 		}
 		CustomSecret = []byte(secret)
 	}
-
+*/
 type CustomClaims struct {
 	//我在这里加了自己申明的字段，这样你才能评鉴出这是我写的史
 	UserID               uint   `json:"user_id"`

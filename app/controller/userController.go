@@ -55,70 +55,100 @@ func (userController *AuthController) GetMyProfile(c *gin.Context) {
 	})
 }
 
-// 更新用户处理
+// 更新用户处理，好悬差点没改死我
 func (authController *AuthController) UpdateUserProfile(c *gin.Context) {
-	// 获取从中间件设置的 user_id
 	userID, exists := c.Get("user_id")
 	if !exists {
 		ReturnMsg(c, http.StatusUnauthorized, "用户没有登陆啊喵")
 		return
 	}
-	var input model.User // 绑定请求的 JSON 数据
+	//绑定输入的model
+	var input struct {
+		Nickname string `json:"nickname"`
+		Avatar   string `json:"avatar"`
+		Username string `json:"username"`
+	}
+	// 绑定输入的JSON
 	if err := c.ShouldBindJSON(&input); err != nil {
 		ReturnError400(c, err)
 		return
 	}
-	var profile model.User // 查找用户
-	result := database.DB.First(&profile, userID)
-	if result.Error != nil {
+	// 查询用户信息
+	var profile model.User
+	if err := database.DB.First(&profile, userID).Error; err != nil {
 		ReturnMsg(c, http.StatusBadRequest, "没有找到这个用户啊喵")
 		return
 	}
-	// 仅在用户名或昵称发生更改时进行唯一性检查
-	if input.Username != "" && input.Username != profile.Username {
-		if ok := authController.IsUserExist(c, input.Username); !ok {
-			return
-		}
-	}
-	if input.Nickname != "" && input.Nickname != profile.Nickname {
-		if ok := authController.IsNicknameExist(c, input.Nickname); !ok {
-			return
-		}
-	}
-	profile.Nickname = input.Nickname // 更新用户信息
-	profile.Avatar = input.Avatar
-	if err := database.DB.Save(&profile).Error; err != nil { // 保存更新
-		// 优先尝试通过 mysql 错误类型检测
-		var me *mysql.MySQLError
-		if errors.As(err, &me) && me.Number == 1062 {
-			// 根据错误信息判断具体字段，优先返回昵称冲突
-			if strings.Contains(err.Error(), "idx_users_nickname") || strings.Contains(err.Error(), "nickname") {
-				ReturnMsg(c, http.StatusBadRequest, "该昵称已被占用喵")
-				return
-			}
-			ReturnMsg(c, http.StatusBadRequest, "存在重复的唯一字段")
-			return
-		}
-		// 回退到字符串匹配（在某些情况下，错误未直接暴露为 mysql.MySQLError）
-		if strings.Contains(err.Error(), "Duplicate entry") || strings.Contains(err.Error(), "ER_DUP_ENTRY") {
-			if strings.Contains(err.Error(), "idx_users_nickname") || strings.Contains(err.Error(), "nickname") {
-				ReturnMsg(c, http.StatusBadRequest, "该昵称已被占用喵")
-				return
-			}
-			ReturnMsg(c, http.StatusBadRequest, "存在重复的唯一字段")
-			return
-		}
-
-		fmt.Print(err.Error())
-		ReturnMsg(c, http.StatusInternalServerError, "存在重复的唯一字段")
+	// 唯一性校验抽离
+	if err := checkUnique(authController, c, &input, &profile); err != nil {
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{ // 返回更新后的用户信息
+	// 更新字段检查
+	if input.Nickname != "" {
+		profile.Nickname = input.Nickname
+	}
+	if input.Avatar != "" {
+		profile.Avatar = input.Avatar
+	}
+	//处理唯一性错误
+	if err := database.DB.Save(&profile).Error; err != nil {
+		processError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
 		"msg":      "用户资料更新成功了喵",
 		"user_id":  profile.UserID,
 		"nickname": profile.Nickname,
 		"avatar":   profile.Avatar,
 	})
+}
+
+// 唯一性校验函数
+func checkUnique(authController *AuthController, c *gin.Context, input interface{}, profile *model.User) error {
+	in, ok := input.(*struct {
+		Nickname string
+		Avatar   string
+		Username string
+	})
+	if !ok {
+		return nil
+	}
+	// 用户名和昵称唯一性检查
+	if in.Username != "" && in.Username != profile.Username {
+		if !authController.IsUserExist(c, in.Username) {
+			return errors.New("用户名已存在")
+		}
+	}
+	if in.Nickname != "" && in.Nickname != profile.Nickname {
+		if !authController.IsNicknameExist(c, in.Nickname) {
+			return errors.New("昵称已存在")
+		}
+	}
+	return nil
+}
+
+// 唯一性错误处理
+func processError(c *gin.Context, err error) {
+	var me *mysql.MySQLError
+	if errors.As(err, &me) && me.Number == 1062 {
+		// 处理昵称保证其唯一性
+		if strings.Contains(err.Error(), "nickname") {
+			ReturnMsg(c, http.StatusBadRequest, "该昵称已被占用喵")
+			return
+		}
+		ReturnMsg(c, http.StatusBadRequest, "存在重复的唯一字段")
+		return
+	}
+	if strings.Contains(err.Error(), "Duplicate entry") {
+		if strings.Contains(err.Error(), "nickname") {
+			ReturnMsg(c, http.StatusBadRequest, "该昵称已被占用喵")
+			return
+		}
+		ReturnMsg(c, http.StatusBadRequest, "存在重复的唯一字段")
+		return
+	}
+	fmt.Print(err.Error())
+	ReturnMsg(c, http.StatusInternalServerError, "存在重复的唯一字段")
 }
 
 // UploadAvatar 上传用户头像
@@ -129,7 +159,7 @@ func (userController *UserController) UploadAvatar(c *gin.Context) {
 		ReturnMsg(c, http.StatusUnauthorized, "你还没有登录喵~")
 		return
 	}
-
+	// 调用服务层处理上传的头像，服务层将对头像自动裁剪和压缩
 	path, err := service.UploadAvatar(c, userID.(uint))
 	if err != nil {
 		ReturnError400(c, err)
