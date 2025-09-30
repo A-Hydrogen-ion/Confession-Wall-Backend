@@ -19,6 +19,7 @@ Confession-Wall-Backend/    <br>
 
 
 ## 功能实现状态（当前）
+![](https://geps.dev/progress/94?dangerColor=800000&warningColor=ff9900&successColor=66ccff)
 
 - [x] 个人资料：修改昵称、上传并设置头像（`app/controller/userController.go`）
 - [x] 注册/登录与密码哈希（`app/model/model.go` 的 `BeforeSave` 与 `CheckPassword`）
@@ -31,7 +32,13 @@ Confession-Wall-Backend/    <br>
 
 等待与前端对接中……
 
-### 扩展的功能
+### 扩展的功能 
+![](https://geps.dev/progress/29?dangerColor=FFA500&warningColor=39c5bb&successColor=66ccff)
+
+- [ ] ~~相同文件去重处理~~不会开发，因为部署服务端可在文件系统层面上实现这个功能
+- [ ] 表白消息定时发送
+- [ ] 表白可以被点赞或取消点赞
+- [ ] 基于表白点赞数和浏览量进行热度排序（热度=点赞数*3+表白数\*2），实现表白热度榜单
 - [x] 在docker环境下构建镜像运行以方便全平台部署
 - [x] 成功部署到云端服务器，不依赖dokcer环境
 - [ ] 使用https进行访问
