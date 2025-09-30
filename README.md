@@ -33,16 +33,17 @@ Confession-Wall-Backend/    <br>
 等待与前端对接中……
 
 ### 扩展的功能 
-![](https://geps.dev/progress/29?dangerColor=FFA500&warningColor=39c5bb&successColor=66ccff)
+![](https://geps.dev/progress/44?dangerColor=FFA500&warningColor=39c5bb&successColor=66ccff)
 
-- [ ] ~~相同文件去重处理~~不会开发，因为部署服务端可在文件系统层面上实现这个功能
-- [ ] 表白消息定时发送
+- [x] ~~相同文件去重处理~~不会开发，因为部署服务端可在文件系统层面上实现这个功能
+- [x] 表白消息定时发送
+- [ ] 记录表白浏览量
 - [ ] 表白可以被点赞或取消点赞
 - [ ] 基于表白点赞数和浏览量进行热度排序（热度=点赞数*3+表白数\*2），实现表白热度榜单
 - [x] 在docker环境下构建镜像运行以方便全平台部署
 - [x] 成功部署到云端服务器，不依赖dokcer环境
-- [ ] 使用https进行访问
-
+- [x] 使用https进行访问
+- [ ] 将前后端整合，后端只允许被本地地址访问以提升安全性
 ## 本地运行
 
 ### 使用docker(推荐)
