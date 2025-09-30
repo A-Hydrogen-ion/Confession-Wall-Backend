@@ -15,15 +15,15 @@ func CreateConfession(db *gorm.DB, confession *model.Confession) error {
 	return db.Create(confession).Error
 }
 
-// 获取某用户的所有表白
-func GetAllConfessions(db *gorm.DB, userID uint) ([]model.Confession, error) {
+// 获取某用户的所有表白（带分页）
+func GetAllConfessions(db *gorm.DB, userID uint, limit int, offset int) ([]model.Confession, error) {
 	var confessions []model.Confession
-	err := db.Where("user_id = ?", userID).Find(&confessions).Error
+	err := db.Where("user_id = ?", userID).Limit(limit).Offset(offset).Find(&confessions).Error
 	return confessions, err
 }
 
-// 获取社区表白
-func ListPublicConfessions(db *gorm.DB, currentUserID uint) ([]model.Confession, error) {
+// 获取社区表白（带分页）
+func ListPublicConfessions(db *gorm.DB, currentUserID uint, limit int, offset int) ([]model.Confession, error) {
 	var blockedIDs []uint
 	var blockedByIDs []uint
 	// 当前用户拉黑的
@@ -38,7 +38,7 @@ func ListPublicConfessions(db *gorm.DB, currentUserID uint) ([]model.Confession,
 	if len(excludeIDs) > 0 {
 		query = query.Where("user_id NOT IN ?", excludeIDs)
 	}
-	err := query.Find(&confessions).Error
+	err := query.Limit(limit).Offset(offset).Find(&confessions).Error
 	return confessions, err
 }
 
@@ -56,6 +56,11 @@ func UpdateConfession(db *gorm.DB, confessionID uint, newContent string, newImag
 
 // 删除表白
 func DeleteConfession(db *gorm.DB, confessionID uint) error {
+	// 先删除评论
+	if err := db.Where("confession_id = ?", confessionID).Delete(&model.Comment{}).Error; err != nil {
+		return err
+	}
+	// 再删除表白
 	return db.Delete(&model.Confession{}, confessionID).Error
 }
 
@@ -66,8 +71,8 @@ func GetConfessionByID(db *gorm.DB, confessionID uint) (model.Confession, error)
 	return confession, err
 }
 
-// 获取某用户的所有表白（排除黑名单）
-func GetUserConfessions(db *gorm.DB, targetUserID uint, currentUserID uint) ([]model.Confession, error) {
+// 获取某用户的所有表白（排除黑名单，带分页）
+func GetUserConfessions(db *gorm.DB, targetUserID uint, currentUserID uint, limit int, offset int) ([]model.Confession, error) {
 	var blockedIDs []uint
 	var blockedByIDs []uint
 	//熟悉的配方…………
@@ -83,7 +88,7 @@ func GetUserConfessions(db *gorm.DB, targetUserID uint, currentUserID uint) ([]m
 	if len(excludeIDs) > 0 {
 		query = query.Where("user_id NOT IN ?", excludeIDs)
 	}
-	err := query.Find(&confessions).Error
+	err := query.Limit(limit).Offset(offset).Find(&confessions).Error
 	return confessions, err
 }
 
@@ -103,7 +108,6 @@ func ListComments(db *gorm.DB, confessionID uint) ([]model.Comment, error) {
 	var comments []model.Comment
 	err := db.Preload("User"). // 关联用户信息
 					Where("confession_id = ?", confessionID). //查询对应的表白
-					Order("created_at ASC").
 					Find(&comments).Error
 
 	if err != nil {

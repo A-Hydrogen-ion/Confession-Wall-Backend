@@ -20,6 +20,7 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 	userController := controller.NewUserController(db)
 	confessionController := controller.CreateConfessionController(db)
 	blockController := controller.NewBlockController(db)
+	commentController := controller.NewCommentController(db)
 	//路由设置
 	config.Engine.Static("/uploads", "./uploads") // 静态文件服务，用于给前端展示图片
 	auth := config.Engine.Group("/api/auth")      // 认证路由
@@ -33,7 +34,7 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 	publicConfession := config.Engine.Group("/api/confession")
 	{
 		publicConfession.GET("/list", middleware.OptionalJWTMiddleware(m), confessionController.ListPublicConfessions) // 查看社区表白（可选认证）
-		publicConfession.GET("/comment", middleware.OptionalJWTMiddleware(m), confessionController.ListComments)       // 查看某条表白的评论（可选认证）
+		publicConfession.GET("/comment", middleware.OptionalJWTMiddleware(m), commentController.ListComments)          // 查看某条表白的评论（可选认证）
 		publicConfession.GET("/detail", middleware.OptionalJWTMiddleware(m), confessionController.GetConfessionByID)   // 根据ID获取表白（可选认证）
 	}
 
@@ -45,16 +46,17 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			user.GET("/profile", authController.GetMyProfile)
 			user.PUT("/profile", authController.UpdateUserProfile) //更新用户信息
 			user.PUT("/avatar", userController.UploadAvatar)
-			// user.PUT("/user/password", controller.UpdateUserPassword)     //修改密码
+			user.PUT("/password", authController.ChangePassword) //修改密码
 		}
 		// 受保护的 confession 路由（需要登录）
 		privateConfession := api.Group("/confession")
 		{
-			privateConfession.POST("/post", confessionController.CreateConfession)   // 发布表白（需要登录），上传图片已经集成到了controller里
-			privateConfession.POST("/update", confessionController.UpdateConfession) // 修改表白（需要登录）
-			privateConfession.POST("/comment", confessionController.AddComment)      // 发布评论（需要登录）
-			privateConfession.DELETE("/comment", confessionController.DeleteComment) // 删除评论（需要登录）
-			privateConfession.GET("/user", confessionController.GetUserConfessions)  // 获取某用户所有表白（需要登录）
+			privateConfession.POST("/post", confessionController.CreateConfession)     // 发布表白（需要登录），上传图片已经集成到了controller里
+			privateConfession.POST("/update", confessionController.UpdateConfession)   // 修改表白（需要登录）
+			privateConfession.DELETE("/delete", confessionController.DeleteConfession) // 删除表白（需要登录）
+			privateConfession.POST("/comment", commentController.AddComment)           // 发布评论（需要登录）
+			privateConfession.DELETE("/comment", commentController.DeleteComment)      // 删除评论（需要登录）
+			privateConfession.GET("/user", confessionController.GetUserConfessions)    // 获取某用户所有表白（需要登录）
 		}
 		block := api.Group("/blacklist")
 		{
