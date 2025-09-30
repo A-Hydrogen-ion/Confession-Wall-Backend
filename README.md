@@ -19,7 +19,7 @@ Confession-Wall-Backend/    <br>
 
 
 ## 功能实现状态（当前）
-![](https://geps.dev/progress/94?dangerColor=800000&warningColor=ff9900&successColor=66ccff)
+![](https://geps.dev/progress/100?dangerColor=800000&warningColor=ff9900&successColor=66ccff)
 
 - [x] 个人资料：修改昵称、上传并设置头像（`app/controller/userController.go`）
 - [x] 注册/登录与密码哈希（`app/model/model.go` 的 `BeforeSave` 与 `CheckPassword`）

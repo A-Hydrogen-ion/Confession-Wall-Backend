@@ -19,6 +19,11 @@ type AuthController struct {
 	db          *gorm.DB
 }
 
+type ChangePassword struct {
+	OldPassword string `json:"old_password" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required,min=6,max=100"`
+}
+
 func ReturnError400(c *gin.Context, err error) error { // 自定义返回错误函数
 	c.JSON(http.StatusBadRequest, gin.H{
 		"code":  http.StatusBadRequest,
@@ -162,4 +167,48 @@ func (authController *AuthController) Login(c *gin.Context) {
 		"data": response,
 		"msg":  "success",
 	})
+}
+
+func (authController *AuthController) ChangePassword(c *gin.Context) {
+	var req ChangePassword
+	// 绑定输入的JSON
+	if err := c.ShouldBindJSON(&req); err != nil {
+		validationErrors, ok := err.(validator.ValidationErrors)
+		// 判断输入
+		if ok {
+			checkInputRequirement(c, validationErrors)
+			return
+		}
+		ReturnError400(c, err)
+		return
+	}
+
+	// 获取当前登录用户ID
+	userIDValue, exists := c.Get("user_id")
+	if !exists {
+		ReturnMsg(c, http.StatusUnauthorized, "你还没有登录喵，服务器娘不知道你是谁")
+		return
+	}
+	userID := userIDValue.(uint)
+
+	// 查找用户
+	user, err := authController.userService.GetUserByID(userID)
+	if err != nil {
+		ReturnMsg(c, http.StatusBadRequest, "你要修改的用户不存在喵~")
+		return
+	}
+
+	// 验证旧密码
+	if err := user.CheckPassword(req.OldPassword); err != nil {
+		ReturnMsg(c, http.StatusUnauthorized, "旧密码输入错误了喵~")
+		return
+	}
+
+	// 更新新密码
+	if err := authController.userService.UpdatePassword(user, req.NewPassword); err != nil {
+		ReturnError400(c, err)
+		return
+	}
+
+	ReturnMsg(c, http.StatusOK, "密码修改成功了喵~")
 }

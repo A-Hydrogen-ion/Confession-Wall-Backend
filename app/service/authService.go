@@ -77,3 +77,22 @@ func (s *UserService) GetUserByUsername(username string) (*model.User, error) { 
 	}
 	return &user, nil
 }
+
+// 根据用户ID获取用户
+func (s *UserService) GetUserByID(userID uint) (*model.User, error) {
+	var user model.User
+	result := s.db.First(&user, userID)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &user, nil
+}
+
+// 更新用户密码
+func (s *UserService) UpdatePassword(user *model.User, newPassword string) error {
+	user.Password = newPassword // User 的 BeforeSave 钩子会自动 hash 密码，不需要单独hash
+	if err := s.db.Save(user).Error; err != nil {
+		return err
+	}
+	return nil
+}
