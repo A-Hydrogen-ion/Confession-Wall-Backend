@@ -3,19 +3,15 @@ package jwt
 import (
 	"errors"
 	"log"
-	"time"
-
 	"os"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-//var CustomSecret = []byte("114514")
-
+// CustomSecret 存储用于 HMAC 签名验证的密钥字节切片
+// 通过环境变量 JWT_SECRET 初始化（startup 时）。如果未设置，将在 init() 中记录错误。
 var CustomSecret []byte
-
-// CustomSecret 用于加盐的字符串,暂时没有想好用时间当字符串还是在服务器内部使用openssl生成一个密钥并传入环境变量JWT_SECRET中
-// 在搞好逻辑关系之前，暂时使用不安全的文本当sercert
 
 func init() {
 	// 若使用生成的密钥，则应用启动时初始化密钥
@@ -26,6 +22,7 @@ func init() {
 	CustomSecret = []byte(secret)
 }
 
+// CustomClaims 为自定义的 JWT claims，携带 user 相关信息
 type CustomClaims struct {
 	//我在这里加了自己申明的字段，这样你才能评鉴出这是我写的史
 	UserID               uint   `json:"user_id"`
@@ -33,13 +30,17 @@ type CustomClaims struct {
 	jwt.RegisteredClaims        // 内嵌标准的声明
 }
 
-// 生成JWT
+// GenerateToken 使用当前全局 CustomSecret 对 claims 进行签名并返回 token 字符串
+// 如果 CustomSecret 为空，会返回错误，避免生成无效/不安全的 token
 func GenerateToken(UserID uint, username string) (string, error) {
+	if len(CustomSecret) == 0 {
+		return "", errors.New("jwt secret is not configured")
+	}
 	claims := CustomClaims{
-		UserID,
-		username,
-		jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)), //设置token过期时间为1天
+		UserID:   UserID,
+		Username: username,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
 			Issuer:    "ConfessionWall",
@@ -53,10 +54,12 @@ func GenerateToken(UserID uint, username string) (string, error) {
 
 // 解析JWT Token
 func ParseToken(tokenString string) (*CustomClaims, error) {
-	var claims = new(CustomClaims)
-	// 由于自定义了Claim结构体，需要使用 ParseWithClaims 方法进行解析
-	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (i interface{}, err error) {
-		return CustomSecret, nil // 返回用于验证的密钥
+	if len(CustomSecret) == 0 {
+		return nil, errors.New("jwt secret is not configured")
+	}
+	var claims = new(CustomClaims) // 由于自定义了Claim结构体，需要使用 ParseWithClaims 方法进行解析
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return CustomSecret, nil
 	})
 	if err != nil {
 		return nil, err

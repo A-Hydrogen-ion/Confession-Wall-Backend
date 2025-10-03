@@ -3,3 +3,27 @@ config.yaml
 db_data/
 uploads/
 data/
+
+# local build artifacts
+build/
+
+# Go build/cache
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Go test binary
+*.test
+
+# Dependency directories (remove the comment if you use a vendor directory)
+vendor/
+
+# IDE/editor temp files
+.vscode/
+*.log
+*.tmp
+
+# OS generated files
+.DS_Store
+Thumbs.db

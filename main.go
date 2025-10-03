@@ -54,10 +54,10 @@ func migrate(db *gorm.DB) { //数据库迁移及检查函数
 	}
 }
 func main() {
-	createUploadDirs()      // 创建必要的文件夹
-	config.InitViper()      //读取配置
-	database.ConnectDB()    // 连接数据库
-	if database.DB == nil { // 检查数据库连接是否成功
+	createUploadDirs()           // 创建必要的文件夹
+	config.InitViper()           //读取配置
+	database.ConnectDB()         // 连接数据库
+	if database.GetDB() == nil { // 检查数据库连接是否成功
 		log.Fatal("数据库连接失败，程序退出") //使用Fatal以使程序自动结束
 	}
 	db := hel()                              //健康检查

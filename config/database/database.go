@@ -10,7 +10,14 @@ import (
 	"gorm.io/gorm"
 )
 
+// DB is the package-level database handle. Prefer using GetDB/SetDB to access it.
 var DB *gorm.DB
+
+// SetDB sets the package-level DB. Use this instead of assigning DB directly to keep
+// a single write point for easier auditing and potential synchronization.
+func SetDB(db *gorm.DB) {
+	DB = db
+}
 
 // 搞个可导出的函数
 func GetDB() *gorm.DB {
@@ -61,7 +68,7 @@ func ConnectDB() {
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 	// 对连接池进行配置
-	DB = db
+	SetDB(db)
 	var version string
 	if err := DB.Raw("SELECT VERSION()").Scan(&version).Error; err != nil {
 		fmt.Printf("数据库连接测试失败: %v", err)

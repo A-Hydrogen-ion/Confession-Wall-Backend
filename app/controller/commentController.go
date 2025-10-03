@@ -26,18 +26,18 @@ func (ctrl *CommentController) AddComment(c *gin.Context) {
 	var req model.Comment
 	//简单的错误处理
 	if err := c.ShouldBindJSON(&req); err != nil {
-		ReturnMsg(c, 400, "你向服务器娘发送了一个奇怪的请求喵~")
+		respondJSON(c, 400, "你向服务器娘发送了一个奇怪的请求喵~", nil)
 		return
 	}
 	//拒绝没登录的用户发布评论
 	userID, exists := c.Get("user_id")
 	if !exists {
-		ReturnMsg(c, 401, "你需要登录才能发表评论哦喵~")
+		respondJSON(c, 401, "你需要登录才能发表评论哦喵~", nil)
 		return
 	}
 	// 检查 confession_id 是否存在，将评论绑定到对应的表白
 	if req.ConfessionID == 0 {
-		ReturnMsg(c, 400, "缺少 confession_id，服务器娘不知道你要在哪条表白下评论啊喵~")
+		respondJSON(c, 400, "缺少 confession_id，服务器娘不知道你要在哪条表白下评论啊喵~", nil)
 		return
 	}
 
@@ -48,7 +48,7 @@ func (ctrl *CommentController) AddComment(c *gin.Context) {
 		ReturnError400(c, err)
 		return
 	}
-	ReturnMsg(c, http.StatusOK, "评论发布成功了，对方收到你的心意了喵~")
+	respondJSON(c, http.StatusOK, "评论发布成功了，对方收到你的心意了喵~", nil)
 }
 
 // 删除评论？哇泼出去的水还想收回？做梦
@@ -63,29 +63,29 @@ func (ctrl *CommentController) DeleteComment(c *gin.Context) {
 	// 获取当前登录用户ID
 	userID, exists := c.Get("user_id")
 	if !exists {
-		ReturnMsg(c, 401, "你需要登录才能删除评论喵~")
+		respondJSON(c, 401, "你需要登录才能删除评论喵~", nil)
 		return
 	}
 
 	// 查询评论，确认是自己发的评论才能删除
 	var comment model.Comment
 	if err := ctrl.DB.First(&comment, commentID).Error; err != nil {
-		ReturnMsg(c, 404, "服务器娘没有查询到这个评论，可能已经被删除了喵~")
+		respondJSON(c, 404, "服务器娘没有查询到这个评论，可能已经被删除了喵~", nil)
 		return
 	}
 
 	if comment.UserID != userID.(uint) {
-		ReturnMsg(c, 403, "不能删除别人的评论喵~，你这个大hentai！")
+		respondJSON(c, 403, "不能删除别人的评论喵~，你这个大hentai！", nil)
 		return
 	}
 
 	// 调用 service 删除
 	if err := service.DeleteComment(ctrl.DB, commentID); err != nil {
-		ReturnMsg(c, 500, "服务器娘宕机了，删除评论失败了喵~")
+		respondJSON(c, 500, "服务器娘宕机了，删除评论失败了喵~", nil)
 		return
 	}
 
-	ReturnMsg(c, http.StatusOK, "评论已成功删除喵~")
+	respondJSON(c, http.StatusOK, "评论已成功删除喵~", nil)
 }
 
 // 嘴上说着不要，身体还是诚实的乖乖写了删除评论的controller了呢……
@@ -101,12 +101,8 @@ func (ctrl *CommentController) ListComments(c *gin.Context) {
 	// 调用 service 层获取评论列表
 	comments, err := service.ListComments(ctrl.DB, confessionID)
 	if err != nil {
-		ReturnMsg(c, 500, "服务器娘宕机了，获取评论失败了喵~")
+		respondJSON(c, 500, "服务器娘宕机了，获取评论失败了喵~", nil)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"code": 200,
-		"data": comments,
-		"msg":  "获取评论成功了喵~",
-	})
+	respondJSON(c, http.StatusOK, "获取评论成功了喵~", comments)
 }

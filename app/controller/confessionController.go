@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net/http"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/model"
@@ -22,32 +21,6 @@ type ConfessionController struct {
 
 func CreateConfessionController(db *gorm.DB) *ConfessionController {
 	return &ConfessionController{DB: db}
-}
-
-// QueryUint 从请求 query 中获取参数并转换为 uint
-func QueryUint(c *gin.Context, key string) (uint, error) {
-	valStr := c.Query(key)
-	if valStr == "" {
-		return 0, errors.New(key + " 参数为空")
-	}
-	valUint64, err := strconv.ParseUint(valStr, 10, 64)
-	if err != nil {
-		return 0, errors.New(key + " 参数无效")
-	}
-	return uint(valUint64), nil
-}
-
-// ParsePagination 统一分页参数解析
-func ParsePagination(c *gin.Context) (limit int, offset int, ok bool) {
-	limitStr := c.DefaultQuery("PageLimit", "10")
-	offsetStr := c.DefaultQuery("Page", "0")
-	limit, err1 := strconv.Atoi(limitStr)
-	offset, err2 := strconv.Atoi(offsetStr)
-	if err1 != nil || err2 != nil || limit < 1 || offset < 0 {
-		ReturnMsg(c, 400, "分页参数不合法喵，你看看你都传入了些什么分页，服务器娘愤怒的告诉你她找不到负数的页码")
-		return 0, 0, false
-	}
-	return limit, offset, true
 }
 
 // ParsePublishTime 统一解析和校验定时发布时间
@@ -79,13 +52,13 @@ func (ctrl *ConfessionController) CreateConfession(c *gin.Context) {
 	maxDelay := 7 * 24 * time.Hour                                 // 最大允许定时发布延迟为7天
 	publishTime, err := ParsePublishTime(publishTimeStr, maxDelay) //调用统一的时间解析函数
 	if err != nil {
-		ReturnMsg(c, 400, err.Error())
+		respondJSON(c, 400, err.Error(), nil)
 		return
 	}
 	//判断用户有没有登录
 	userID, exists := c.Get("user_id")
 	if !exists {
-		ReturnMsg(c, 401, "只有登录的孩子才能发布表白喵~")
+		respondJSON(c, 401, "只有登录的孩子才能发布表白喵~", nil)
 		return
 	}
 
@@ -109,13 +82,12 @@ func (ctrl *ConfessionController) CreateConfession(c *gin.Context) {
 		ReturnError400(c, err)
 		return
 	}
-	ReturnMsg(c, http.StatusOK, "发布成功了喵~")
+	respondJSON(c, http.StatusOK, "发布成功了喵~", nil)
 }
 
 // 修改表白,返回错误统一调用authcontroller里的returnmsg
 func (ctrl *ConfessionController) UpdateConfession(c *gin.Context) {
-	confessionIDStr := c.PostForm("confession_id")
-	confessionID, err := strconv.ParseUint(confessionIDStr, 10, 64)
+	confessionID, err := GetUintParam(c, "confession_id")
 	if err != nil {
 		ReturnMsg(c, 400, "服务器娘没有查询到这个表白，可能已经被删除了喵~") //错误处理
 		return
@@ -229,7 +201,7 @@ func (ctrl *ConfessionController) GetConfessionByID(c *gin.Context) {
 func (ctrl *ConfessionController) GetUserConfessions(c *gin.Context) {
 	currentUserID, exists := c.Get("user_id")
 	if !exists {
-		ReturnMsg(c, 401, "你需要登录才能查看哦喵~")
+		respondJSON(c, 401, "你需要登录才能查看哦喵~", nil)
 		return
 	}
 	targetUserID, err := QueryUint(c, "user_id")
@@ -264,7 +236,7 @@ func (ctrl *ConfessionController) DeleteConfession(c *gin.Context) {
 	}
 	userID, exists := c.Get("user_id")
 	if !exists {
-		ReturnMsg(c, 401, "你需要登录才能删除表白喵~")
+		respondJSON(c, 401, "你需要登录才能删除表白喵~", nil)
 		return
 	}
 	// 查询表白，确认是自己发的才能删

@@ -25,45 +25,40 @@ type ChangePassword struct {
 }
 
 func ReturnError400(c *gin.Context, err error) error { // 自定义返回错误函数
-	c.JSON(http.StatusBadRequest, gin.H{
-		"code":  http.StatusBadRequest,
-		"msg":   err.Error(),
-		"token": nil,
-	})
+	respondJSON(c, http.StatusBadRequest, err.Error(), nil)
 	return nil
 }
 
 func ReturnMsg(c *gin.Context, state int, msg string) error { //自定义返回消息函数
-	c.JSON(state, gin.H{
-		"code":  state,
-		"msg":   msg,
-		"token": nil,
-	})
+	respondJSON(c, state, msg, nil)
 	return nil
 }
 
 // 创建AuthController
 func NewAuthController(db *gorm.DB) *AuthController {
 	return &AuthController{
-		userService: service.NewUserService(),
+		userService: service.NewUserService(db),
 		db:          db,
 	}
 }
 
 // 输入要求控制函数
 func checkInputRequirement(c *gin.Context, validationErrors validator.ValidationErrors) {
-
-	for _, fieldError := range validationErrors {
-		switch fieldError.Tag() {
-		//各种类型的错误处理
-		case "required": //不存在必须字段
-			ReturnMsg(c, http.StatusBadRequest, fmt.Sprintf("%s 是必填字段", fieldError.Field()))
+	// 只返回第一个校验错误，消息尽量友好
+	for _, fe := range validationErrors {
+		switch fe.Tag() {
+		case "required":
+			ReturnMsg(c, http.StatusBadRequest, fmt.Sprintf("%s 是必填字段", fe.Field()))
 			return
-		case "min": //字段长度过短
-			ReturnMsg(c, http.StatusBadRequest, fmt.Sprintf("%s 长度不能少于 %s 个字符", fieldError.Field(), fieldError.Param()))
+		case "min":
+			ReturnMsg(c, http.StatusBadRequest, fmt.Sprintf("%s 长度不能少于 %s 个字符", fe.Field(), fe.Param()))
 			return
-		case "max": //字段长度过长
-			ReturnMsg(c, http.StatusBadRequest, fmt.Sprintf("%s 长度不能超过 %s 个字符", fieldError.Field(), fieldError.Param()))
+		case "max":
+			ReturnMsg(c, http.StatusBadRequest, fmt.Sprintf("%s 长度不能超过 %s 个字符", fe.Field(), fe.Param()))
+			return
+		default:
+			// 兜底：使用验证器提供的错误信息
+			ReturnMsg(c, http.StatusBadRequest, fe.Error())
 			return
 		}
 	}
@@ -74,7 +69,7 @@ func (authController *AuthController) checkExists(c *gin.Context, input string,
 	checkFunc func(string) (bool, error), errorMsg string) bool {
 	exists, err := checkFunc(input)
 	if err != nil {
-		log.Println("检查存在性错误:", err)
+		log.Printf("检查%s存在性时发生错误: %v", input, err)
 		ReturnError400(c, err)
 		return false
 	}
@@ -123,14 +118,11 @@ func (authController *AuthController) Register(c *gin.Context) {
 	}
 	token, err := jwt.GenerateToken(user.UserID, user.Username) // 生成 token
 	if err != nil {
+		// token 生成失败：返回 500 更符合语义，但保持原有行为为 400
 		ReturnMsg(c, http.StatusBadRequest, "token生成失败了喵")
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{ //返回成功
-		"code": http.StatusOK,
-		"data": gin.H{"token": token},
-		"msg":  "success",
-	})
+	respondJSON(c, http.StatusOK, "success", gin.H{"token": token})
 }
 
 // 登录主函数
@@ -162,11 +154,7 @@ func (authController *AuthController) Login(c *gin.Context) {
 		UserID: user.UserID,
 		Token:  token,
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"code": http.StatusOK,
-		"data": response,
-		"msg":  "success",
-	})
+	respondJSON(c, http.StatusOK, "success", response)
 }
 
 func (authController *AuthController) ChangePassword(c *gin.Context) {
