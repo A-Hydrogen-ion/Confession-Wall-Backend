@@ -18,7 +18,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-//太棒了，这个处理头像的service成终极大史山了
+// 太棒了，这个处理头像的service成终极大史山了
 
 // 上传图片并返回文件路径
 func UploadImages(c *gin.Context, userID uint) ([]string, error) {

@@ -24,7 +24,11 @@ func InitViper() {
 	viper.BindEnv("database.username", "APP_DATABASE_USERNAME")
 	viper.BindEnv("database.password", "APP_DATABASE_PASSWORD")
 	viper.BindEnv("database.name", "APP_DATABASE_NAME")
-
+	viper.BindEnv("server.port", "SERVER_PORT")
+	viper.BindEnv("server.host", "SERVER_LISTEN_ADDR")
+	viper.BindEnv("redis.addr", "APP_REDIS_ADDR")
+	viper.BindEnv("redis.password", "APP_REDIS_PASSWORD")
+	viper.BindEnv("redis.db", "APP_REDIS_DB")
 }
 
 func SetDefault() {
@@ -36,7 +40,9 @@ func SetDefault() {
 	viper.SetDefault("database.username", "root")
 	viper.SetDefault("database.password", "")
 	viper.SetDefault("database.name", "confession_wall")
-
+	viper.SetDefault("redis.addr", "localhost:6379")
+	viper.SetDefault("redis.password", "")
+	viper.SetDefault("redis.db", 0)
 }
 
 func setupConfigFile() {

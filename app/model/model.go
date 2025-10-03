@@ -28,6 +28,8 @@ type Confession struct {
 	Images      []string  `gorm:"type:json;serializer:json" json:"images"`
 	Anonymous   bool      `gorm:"not null" json:"Anonymous"`
 	Private     bool      `gorm:"not null" json:"Private"`
+	ViewCount   uint      `gorm:"default:0" json:"viewCount"` // 浏览量
+	LikeCount   uint      `gorm:"default:0" json:"likeCount"` // 点赞量
 	PublishedAt time.Time `gorm:"column:publishedAt;not null" json:"publishedAt"`
 	ChangedAt   time.Time `gorm:"column:changedAt;not null" json:"changedAt"`
 }

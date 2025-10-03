@@ -90,7 +90,7 @@ func (authController *AuthController) IsNicknameExist(c *gin.Context, input stri
 	return authController.checkExists(c, input, authController.userService.CheckNicknameExists, "昵称已存在") // 这里传递的是函数本身，不是调用结果
 }
 
-// 注册主函数// 修改以提示史山可读性
+// 注册主函数
 func (authController *AuthController) Register(c *gin.Context) {
 	var input models.RegisterRequest
 	if err := c.ShouldBindJSON(&input); err != nil {

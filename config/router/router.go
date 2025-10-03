@@ -57,6 +57,8 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			privateConfession.POST("/comment", commentController.AddComment)           // 发布评论（需要登录）
 			privateConfession.DELETE("/comment", commentController.DeleteComment)      // 删除评论（需要登录）
 			privateConfession.GET("/user", confessionController.GetUserConfessions)    // 获取某用户所有表白（需要登录）
+			privateConfession.POST("/like", controller.LikeConfession)                 // 点赞表白（需要登录）
+			privateConfession.POST("/unlike", controller.UnlikeConfession)             // 取消点赞表白（需要登录）
 		}
 		block := api.Group("/blacklist")
 		{

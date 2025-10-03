@@ -44,7 +44,8 @@ func hel() *gorm.DB { // 数据库健康检查
 	return db
 }
 func migrate(db *gorm.DB) { //数据库迁移及检查函数
-	err := db.AutoMigrate(&model.User{})
+	err := db.AutoMigrate(&model.User{}) //先初始化user表
+	//再初始化剩下的
 	err = db.AutoMigrate(&model.Confession{}, &model.Comment{}, &model.Block{})
 	if err != nil {
 		log.Printf("数据库迁移失败: %v", err)
@@ -63,6 +64,7 @@ func main() {
 	db := hel()                              //健康检查
 	authMiddleware := middleware.NewAuth(db) //获取数据库实例并创建中间件
 	migrate(db)                              // 自动迁移数据库
+	database.InitRedis(database.GetDB())     // 初始化 Redis
 	port := viper.GetInt("server.port")      // 获取配置
 	host := viper.GetString("server.host")
 	if host == "" {

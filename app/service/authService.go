@@ -13,8 +13,8 @@ type UserService struct {
 	db *gorm.DB
 }
 
-// NewUserService constructs a UserService with an injected *gorm.DB.
-// This avoids directly depending on package-level globals and makes testing easier.
+// 通过NewUserService 创建一个新的 UserService 实例
+// 这样做可以使得之后测试数据库和实际使用的数据库不互相干扰
 func NewUserService(db *gorm.DB) *UserService {
 	if db == nil {
 		log.Println("警告: 传入的 db 为 nil，UserService 将无法工作")
