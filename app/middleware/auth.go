@@ -37,12 +37,6 @@ func JWTMiddleware(m Auth) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		// 检查用户状态（小黑屋功能）
-		// if user.Status == "banned" {
-		// 	controller.ReturnMsg(c, http.StatusForbidden, "这个用户被拉进小黑屋了喵")
-		// 	c.Abort()
-		// 	return
-		// }
 		// 将用户信息保存到请求的上下文
 		c.Set("user_id", user.UserID)
 		c.Set("username", user.Username)
