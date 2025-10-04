@@ -41,41 +41,49 @@ func ParsePublishTime(publishTimeStr string, maxDelay time.Duration) (time.Time,
 	}
 	return publishTime, nil
 }
+func GetUserID(c *gin.Context) (uint, error) { //获取用户ID的统一辅助函数
+	uid, exists := c.Get("user_id")
+	if !exists {
+		respondJSON(c, http.StatusUnauthorized, "只有登录的孩子才能发布表白喵~", nil)
+		return 0, errors.New("未登录")
+	}
+	return uid.(uint), nil
+}
 
-// 发布表白
+// CreateConfession 发布表白
 func (ctrl *ConfessionController) CreateConfession(c *gin.Context) {
-	content := c.PostForm("content")
-	anonymous := c.PostForm("anonymous") == "true" //发布的表白是否匿名
-	private := c.PostForm("private") == "true"     //发布的表白是否私密
-	publishTimeStr := c.PostForm("publish_time")   // 前端传递的定时发布时间（可选）
+	var req model.CreateConfessionRequest
+	if err := c.ShouldBind(&req); err != nil {
+		respondJSON(c, http.StatusBadRequest, "参数格式不对喵~", nil)
+		return
+	}
 	var publishTime time.Time
-	maxDelay := 7 * 24 * time.Hour                                 // 最大允许定时发布延迟为7天
-	publishTime, err := ParsePublishTime(publishTimeStr, maxDelay) //调用统一的时间解析函数
+	maxDelay := 7 * 24 * time.Hour                                  // 最大允许定时发布延迟为7天
+	publishTime, err := ParsePublishTime(req.PublishTime, maxDelay) //调用统一的时间解析函数
 	if err != nil {
-		respondJSON(c, 400, err.Error(), nil)
+		respondJSON(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 	//判断用户有没有登录
-	userID, exists := c.Get("user_id")
-	if !exists {
-		respondJSON(c, 401, "只有登录的孩子才能发布表白喵~", nil)
+	userID, err := GetUserID(c)
+	if err != nil {
 		return
 	}
 
 	// 调用封装的图片上传函数
-	imagePaths, err := service.UploadImages(c, userID.(uint))
+	imagePaths, err := service.UploadImages(c, userID)
 	//终于简洁的多了（狂喜
-	if err != nil {
+	if err != nil { //对于可能的错误处理
 		ReturnError400(c, err)
 		return
 	}
 	// 保存表白与发布人的ID和表白属性
 	confession := model.Confession{
-		UserID:      userID.(uint),
-		Content:     content,
+		UserID:      userID,
+		Content:     req.Content,
 		Images:      imagePaths,
-		Anonymous:   anonymous,
-		Private:     private,
+		Anonymous:   req.Anonymous,
+		Private:     req.Private,
 		PublishedAt: publishTime, //单独在controller里处理发布时间
 	}
 	if err := service.CreateConfession(ctrl.DB, &confession); err != nil {
@@ -85,46 +93,38 @@ func (ctrl *ConfessionController) CreateConfession(c *gin.Context) {
 	respondJSON(c, http.StatusOK, "发布成功了喵~", nil)
 }
 
-// 修改表白,返回错误统一调用authcontroller里的returnmsg
+// UpdateConfession 修改表白,返回错误统一调用authcontroller里的returnmsg
 func (ctrl *ConfessionController) UpdateConfession(c *gin.Context) {
-	confessionID, err := GetUintParam(c, "confession_id")
+	//检查输入和权限
+	confession := ctrl.CheckInput(c)
+	if confession.ID == 0 {
+		return //检查失败直接返回
+	}
+	//获取用户ID
+	userID, err := GetUserID(c)
 	if err != nil {
-		ReturnMsg(c, 400, "服务器娘没有查询到这个表白，可能已经被删除了喵~") //错误处理
 		return
 	}
-	userID, exists := c.Get("user_id")
-	if !exists {
-		ReturnMsg(c, 401, "只有登录的孩子才能修改表白喵~") //需要登录
-		return
-	}
-	var confession model.Confession
-	if err := ctrl.DB.First(&confession, confessionID).Error; err != nil {
-		ReturnMsg(c, 404, "服务器娘没有查询到这个表白，可能已经被删除了喵~")
-		return
-	}
-	if confession.UserID != userID.(uint) {
-		ReturnMsg(c, 403, "你居然想修改别人的表白，hentai！") //不准修改别人的表白
-		return
-	}
+	//获取新的内容和图片
 	newContent := c.PostForm("content")
 	publishTimeStr := c.PostForm("publish_time")
 	maxDelay := 7 * 24 * time.Hour // 最大允许定时发布延迟为7天
 	if publishTimeStr != "" {
 		publishTime, err := ParsePublishTime(publishTimeStr, maxDelay) //调用统一的时间解析函数
 		if err != nil {
-			ReturnMsg(c, 400, err.Error())
+			ReturnMsg(c, http.StatusBadRequest, err.Error())
 			return
 		}
 		confession.PublishedAt = publishTime //此处与发布表白不同！不传入则保持原有发布时间不变
 	}
 	form, err := c.MultipartForm()
 	if err != nil {
-		ReturnMsg(c, 400, "图片因为某些原因上传失败了喵")
+		ReturnMsg(c, http.StatusBadRequest, "图片因为某些原因上传失败了喵")
 		return
 	}
 	files := form.File["images"]
 	if len(files) > 9 {
-		ReturnMsg(c, 400, "9张图片已经能让对方感受到你的心意了，不要再上传了喵~")
+		ReturnMsg(c, http.StatusBadRequest, "9张图片已经能让对方感受到你的心意了，不要再上传了喵~")
 		return
 	}
 
@@ -134,7 +134,7 @@ func (ctrl *ConfessionController) UpdateConfession(c *gin.Context) {
 	}
 	//对重新传回来的图片进行格式和大小检查
 	// 调用封装的图片上传函数
-	imagePaths, err := service.UploadImages(c, userID.(uint))
+	imagePaths, err := service.UploadImages(c, userID)
 	if err != nil {
 		ReturnError400(c, err) //imagePath会返回更多的错误信息，这里只做最简单的错误处理
 		return
@@ -143,13 +143,37 @@ func (ctrl *ConfessionController) UpdateConfession(c *gin.Context) {
 	confession.Images = imagePaths
 	confession.Content = newContent
 	if err := ctrl.DB.Save(&confession).Error; err != nil {
-		ReturnMsg(c, 500, "服务器娘宕机了，修改失败了喵~")
+		ReturnMsg(c, http.StatusInternalServerError, "服务器娘宕机了，修改失败了喵~")
 		return
 	}
-	ReturnMsg(c, 200, "修改成功了喵~")
+	ReturnMsg(c, http.StatusOK, "修改成功了喵~")
 }
 
-// 查看社区表白
+// CheckInput 检查输入和权限的辅助函数
+func (ctrl *ConfessionController) CheckInput(c *gin.Context) model.Confession {
+	confessionID, err := GetUintParam(c, "confession_id")
+	if err != nil {
+		ReturnMsg(c, http.StatusBadRequest, "服务器娘没有查询到这个表白，可能已经被删除了喵~") //错误处理
+		return model.Confession{}
+	}
+	userID, err := GetUserID(c)
+	if err != nil {
+		return model.Confession{}
+	}
+	var confession model.Confession //查询表白
+	if err := ctrl.DB.First(&confession, confessionID).Error; err != nil {
+		ReturnMsg(c, http.StatusNotFound, "服务器娘没有查询到这个表白，可能已经被删除了喵~")
+		return model.Confession{}
+	}
+	if confession.UserID != userID {
+		ReturnMsg(c, http.StatusForbidden, "你居然想修改别人的表白，hentai！") //不准修改别人的表白，对象错误处理
+		return model.Confession{}
+	}
+	return confession
+
+}
+
+// ListPublicConfessions 查看社区表白
 func (ctrl *ConfessionController) ListPublicConfessions(c *gin.Context) {
 	var uid uint = 0
 	if userID, exists := c.Get("user_id"); exists {
@@ -162,7 +186,7 @@ func (ctrl *ConfessionController) ListPublicConfessions(c *gin.Context) {
 	}
 	confessions, err := service.ListPublicConfessions(ctrl.DB, uid, limit, offset)
 	if err != nil {
-		ReturnMsg(c, 500, "获取失败了喵~")
+		ReturnMsg(c, http.StatusInternalServerError, "获取失败了喵~")
 		return
 	}
 	for i := range confessions {
@@ -171,13 +195,13 @@ func (ctrl *ConfessionController) ListPublicConfessions(c *gin.Context) {
 		}
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"code": 200,
+		"code": http.StatusOK,
 		"data": confessions,
 		"msg":  "获取成功了喵~",
 	})
 }
 
-// 根据ID获取单条表白
+// GetConfessionByID 根据ID获取单条表白
 func (ctrl *ConfessionController) GetConfessionByID(c *gin.Context) {
 	confessionID, err := QueryUint(c, "id")
 	if err != nil {
@@ -209,11 +233,11 @@ func (ctrl *ConfessionController) GetConfessionByID(c *gin.Context) {
 	})
 }
 
-// 获取某用户的所有表白（需登录，排除黑名单和私密）
+// GetUserConfessions 获取某用户的所有表白（需登录，排除黑名单和私密）
 func (ctrl *ConfessionController) GetUserConfessions(c *gin.Context) {
 	currentUserID, exists := c.Get("user_id")
 	if !exists {
-		respondJSON(c, 401, "你需要登录才能查看哦喵~", nil)
+		respondJSON(c, http.StatusUnauthorized, "你需要登录才能查看哦喵~", nil)
 		return
 	}
 	targetUserID, err := QueryUint(c, "user_id")
@@ -239,7 +263,7 @@ func (ctrl *ConfessionController) GetUserConfessions(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": confessions})
 }
 
-// 删除表白（同时删除所有评论）
+// DeleteConfession 删除表白（同时删除所有评论）
 func (ctrl *ConfessionController) DeleteConfession(c *gin.Context) {
 	confessionID, err := QueryUint(c, "confession_id")
 	if err != nil {
@@ -248,17 +272,17 @@ func (ctrl *ConfessionController) DeleteConfession(c *gin.Context) {
 	}
 	userID, exists := c.Get("user_id")
 	if !exists {
-		respondJSON(c, 401, "你需要登录才能删除表白喵~", nil)
+		respondJSON(c, http.StatusUnauthorized, "你需要登录才能删除表白喵~", nil)
 		return
 	}
 	// 查询表白，确认是自己发的才能删
 	var confession model.Confession
 	if err := ctrl.DB.First(&confession, confessionID).Error; err != nil {
-		ReturnMsg(c, 404, "服务器娘没有查询到这个表白，可能已经被删除了喵~")
+		ReturnMsg(c, http.StatusNotFound, "服务器娘没有查询到这个表白，可能已经被删除了喵~")
 		return
 	}
 	if confession.UserID != userID.(uint) {
-		ReturnMsg(c, 403, "不能删除别人的表白，你个hentai!")
+		ReturnMsg(c, http.StatusForbidden, "不能删除别人的表白，你个hentai!")
 		return
 	}
 	// 调用 service 层删除表白和评论

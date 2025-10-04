@@ -1,12 +1,13 @@
 package config
 
 import (
+	"errors"
 	"log"
 
 	"github.com/spf13/viper"
 )
 
-// viper读取配置文件
+// InitViper viper读取配置文件
 func InitViper() {
 
 	SetDefault()
@@ -18,17 +19,17 @@ func InitViper() {
 	// 自动绑定环境变量（将以APP_开头的环境变量绑定到配置键）
 	viper.SetEnvPrefix("APP")
 	viper.AutomaticEnv()
-	viper.BindEnv("server.port", "APP_SERVER_PORT")
-	viper.BindEnv("database.host", "APP_DATABASE_HOST")
-	viper.BindEnv("database.port", "APP_DATABASE_PORT")
-	viper.BindEnv("database.username", "APP_DATABASE_USERNAME")
-	viper.BindEnv("database.password", "APP_DATABASE_PASSWORD")
-	viper.BindEnv("database.name", "APP_DATABASE_NAME")
-	viper.BindEnv("server.port", "SERVER_PORT")
-	viper.BindEnv("server.host", "SERVER_LISTEN_ADDR")
-	viper.BindEnv("redis.addr", "APP_REDIS_ADDR")
-	viper.BindEnv("redis.password", "APP_REDIS_PASSWORD")
-	viper.BindEnv("redis.db", "APP_REDIS_DB")
+	_ = viper.BindEnv("server.port", "APP_SERVER_PORT")
+	_ = viper.BindEnv("database.host", "APP_DATABASE_HOST")
+	_ = viper.BindEnv("database.port", "APP_DATABASE_PORT")
+	_ = viper.BindEnv("database.username", "APP_DATABASE_USERNAME")
+	_ = viper.BindEnv("database.password", "APP_DATABASE_PASSWORD")
+	_ = viper.BindEnv("database.name", "APP_DATABASE_NAME")
+	_ = viper.BindEnv("server.port", "SERVER_PORT")
+	_ = viper.BindEnv("server.host", "SERVER_LISTEN_ADDR")
+	_ = viper.BindEnv("redis.addr", "APP_REDIS_ADDR")
+	_ = viper.BindEnv("redis.password", "APP_REDIS_PASSWORD")
+	_ = viper.BindEnv("redis.db", "APP_REDIS_DB")
 }
 
 func SetDefault() {
@@ -58,10 +59,9 @@ func setupConfigFile() {
 // fatal信息是deepseek生成的，别看我，真的不是我想的（目移）
 func readConfig() {
 	if err := viper.ReadInConfig(); err != nil { // 读取配置文件
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+		var configFileNotFoundError viper.ConfigFileNotFoundError
+		if errors.As(err, &configFileNotFoundError) {
 			log.Println("没有找到配置文件，将使用环境变量或默认值哦喵")
-		} else {
-			log.Printf("配置文件存在但读取错误啦喵，检查配置文件的格式是否符合标准啦baka: %v", err)
 		}
 	} else {
 		log.Println("配置文件加载成功了喵")

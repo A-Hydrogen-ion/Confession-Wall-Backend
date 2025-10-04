@@ -13,7 +13,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// 已经写不动controller的星期五的小绵羊也写不动注释了
+// AuthController 已经写不动controller的星期五的小绵羊也写不动注释了
 type AuthController struct {
 	userService *service.UserService
 	db          *gorm.DB
@@ -24,17 +24,15 @@ type ChangePassword struct {
 	NewPassword string `json:"new_password" binding:"required,min=6,max=100"`
 }
 
-func ReturnError400(c *gin.Context, err error) error { // 自定义返回错误函数
+func ReturnError400(c *gin.Context, err error) { // 自定义返回错误函数
 	respondJSON(c, http.StatusBadRequest, err.Error(), nil)
-	return nil
 }
 
-func ReturnMsg(c *gin.Context, state int, msg string) error { //自定义返回消息函数
+func ReturnMsg(c *gin.Context, state int, msg string) { //自定义返回消息函数
 	respondJSON(c, state, msg, nil)
-	return nil
 }
 
-// 创建AuthController
+// NewAuthController 创建AuthController
 func NewAuthController(db *gorm.DB) *AuthController {
 	return &AuthController{
 		userService: service.NewUserService(db),
@@ -65,7 +63,7 @@ func checkInputRequirement(c *gin.Context, validationErrors validator.Validation
 }
 
 // 存在验证函数
-func (authController *AuthController) checkExists(c *gin.Context, input string,
+func (ac *AuthController) checkExists(c *gin.Context, input string,
 	checkFunc func(string) (bool, error), errorMsg string) bool {
 	exists, err := checkFunc(input)
 	if err != nil {
@@ -80,18 +78,18 @@ func (authController *AuthController) checkExists(c *gin.Context, input string,
 	return true
 }
 
-// 用户名存在验证函数
-func (authController *AuthController) IsUserExist(c *gin.Context, input string) bool {
-	return authController.checkExists(c, input, authController.userService.CheckUsernameExists, "用户名已存在") // 这里传递的是函数本身，不是调用结果
+// IsUserExist 用户名存在验证函数
+func (ac *AuthController) IsUserExist(c *gin.Context, input string) bool {
+	return ac.checkExists(c, input, ac.userService.CheckUsernameExists, "用户名已存在") // 这里传递的是函数本身，不是调用结果
 }
 
-// 昵称存在验证函数
-func (authController *AuthController) IsNicknameExist(c *gin.Context, input string) bool {
-	return authController.checkExists(c, input, authController.userService.CheckNicknameExists, "昵称已存在") // 这里传递的是函数本身，不是调用结果
+// IsNicknameExist 昵称存在验证函数
+func (ac *AuthController) IsNicknameExist(c *gin.Context, input string) bool {
+	return ac.checkExists(c, input, ac.userService.CheckNicknameExists, "昵称已存在") // 这里传递的是函数本身，不是调用结果
 }
 
-// 注册主函数
-func (authController *AuthController) Register(c *gin.Context) {
+// Register 注册主函数
+func (ac *AuthController) Register(c *gin.Context) {
 	var input models.RegisterRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
 		validationErrors, ok := err.(validator.ValidationErrors)
@@ -103,7 +101,7 @@ func (authController *AuthController) Register(c *gin.Context) {
 		ReturnError400(c, err)
 		return
 	}
-	isExist := authController.IsUserExist(c, input.Username) // 检查用户名是否已存在
+	isExist := ac.IsUserExist(c, input.Username) // 检查用户名是否已存在
 	if !isExist {
 		return
 	}
@@ -112,21 +110,21 @@ func (authController *AuthController) Register(c *gin.Context) {
 		Password: input.Password, // 映射到数据库 password_hash 列，自动使用BeforeSave钩子hash密码
 		Nickname: input.Nickname, // 使用输入的昵称
 	}
-	if err := authController.userService.CreateUser(&user); err != nil { //错误处理
+	if err := ac.userService.CreateUser(&user); err != nil { //错误处理
 		ReturnError400(c, err)
 		return
 	}
 	token, err := jwt.GenerateToken(user.UserID, user.Username) // 生成 token
 	if err != nil {
-		// token 生成失败：返回 500 更符合语义，但保持原有行为为 400
+		// token 生成失败：返回 500 更符合语义，但保持原有行为为 http.StatusBadRequest
 		ReturnMsg(c, http.StatusBadRequest, "token生成失败了喵")
 		return
 	}
 	respondJSON(c, http.StatusOK, "success", gin.H{"token": token})
 }
 
-// 登录主函数
-func (authController *AuthController) Login(c *gin.Context) {
+// Login 登录主函数
+func (ac *AuthController) Login(c *gin.Context) {
 	var input models.LoginRequest
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -134,7 +132,7 @@ func (authController *AuthController) Login(c *gin.Context) {
 		return
 	}
 	// 查找用户模块
-	user, err := authController.userService.GetUserByUsername(input.Username)
+	user, err := ac.userService.GetUserByUsername(input.Username)
 	if err != nil {
 		ReturnMsg(c, http.StatusBadRequest, "用户名或密码错误喵")
 		return
@@ -157,7 +155,7 @@ func (authController *AuthController) Login(c *gin.Context) {
 	respondJSON(c, http.StatusOK, "success", response)
 }
 
-func (authController *AuthController) ChangePassword(c *gin.Context) {
+func (ac *AuthController) ChangePassword(c *gin.Context) {
 	var req ChangePassword
 	// 绑定输入的JSON
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -167,7 +165,7 @@ func (authController *AuthController) ChangePassword(c *gin.Context) {
 			checkInputRequirement(c, validationErrors)
 			return
 		}
-		ReturnError400(c, err)
+		ReturnError400(c, err) //调用统一错误返回函数
 		return
 	}
 
@@ -180,7 +178,7 @@ func (authController *AuthController) ChangePassword(c *gin.Context) {
 	userID := userIDValue.(uint)
 
 	// 查找用户
-	user, err := authController.userService.GetUserByID(userID)
+	user, err := ac.userService.GetUserByID(userID)
 	if err != nil {
 		ReturnMsg(c, http.StatusBadRequest, "你要修改的用户不存在喵~")
 		return
@@ -193,7 +191,7 @@ func (authController *AuthController) ChangePassword(c *gin.Context) {
 	}
 
 	// 更新新密码
-	if err := authController.userService.UpdatePassword(user, req.NewPassword); err != nil {
+	if err := ac.userService.UpdatePassword(user, req.NewPassword); err != nil {
 		ReturnError400(c, err)
 		return
 	}

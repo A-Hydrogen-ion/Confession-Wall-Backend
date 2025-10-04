@@ -6,13 +6,13 @@ import (
 	"os"
 	"time"
 
-	middleware "github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/middleware"
+	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/middleware"
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/model"
 	"gorm.io/gorm"
 
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/service"
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/config/config"
-	database "github.com/A-Hydrogen-ion/Confession-Wall-Backend/config/database"
+	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/config/database"
 	routes "github.com/A-Hydrogen-ion/Confession-Wall-Backend/config/router"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"

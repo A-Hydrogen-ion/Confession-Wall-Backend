@@ -7,7 +7,7 @@ import (
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/config/database"
 )
 
-// 增加浏览量
+// ViewCount 增加浏览量
 func ViewCount(confessionID uint) error {
 	key := "confession:view:" + strconv.Itoa(int(confessionID))
 	// 每次浏览就自增1
@@ -15,7 +15,7 @@ func ViewCount(confessionID uint) error {
 	return err
 }
 
-// 获取浏览量
+// GetViewCount 获取浏览量
 func GetViewCount(confessionID uint) (int64, error) {
 	key := "confession:view:" + strconv.Itoa(int(confessionID))
 	return database.RedisClient.Get(context.Background(), key).Int64()

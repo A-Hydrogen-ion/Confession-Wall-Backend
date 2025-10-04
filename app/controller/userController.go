@@ -21,8 +21,8 @@ func NewUserController(db *gorm.DB) *UserController {
 	return &UserController{DB: db}
 }
 
-// 获取自己的配置
-func (userController *AuthController) GetMyProfile(c *gin.Context) {
+// GetMyProfile 获取自己的配置
+func (uc *AuthController) GetMyProfile(c *gin.Context) {
 	// 获取从中间件设置的user_id
 	userID, _ := c.Get("user_id")
 
@@ -34,7 +34,7 @@ func (userController *AuthController) GetMyProfile(c *gin.Context) {
 	// 查询用户信息
 	var profile model.User
 	// 使用注入到 AuthController 的 db 实例（接收者名为 userController）
-	result := userController.db.First(&profile, userID)
+	result := uc.db.First(&profile, userID)
 	if result.Error != nil {
 		respondJSON(c, http.StatusBadRequest, "没有找到这个用户啊喵", nil)
 		return
@@ -52,7 +52,7 @@ func (userController *AuthController) GetMyProfile(c *gin.Context) {
 		"avatar":   avatarURL})
 }
 
-// 通过 user_id 获取用户详情(只展示昵称)
+// GetUserProfileByID 通过 user_id 获取用户详情(只展示昵称)
 func (userController *UserController) GetUserProfileByID(c *gin.Context) {
 	userID, err := QueryUint(c, "user_id")
 	if err != nil {
@@ -75,43 +75,42 @@ func (userController *UserController) GetUserProfileByID(c *gin.Context) {
 	})
 }
 
-// 更新用户处理，好悬差点没改死我
-func (authController *AuthController) UpdateUserProfile(c *gin.Context) {
+// UpdateUserProfile 更新用户处理，好悬差点没改死我
+func (ac *AuthController) UpdateUserProfile(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
 		respondJSON(c, http.StatusUnauthorized, "用户没有登陆啊喵", nil)
 		return
 	}
-	//绑定输入的model
-	var input struct {
-		Nickname string `json:"nickname"`
-		Avatar   string `json:"avatar"`
-		Username string `json:"username"`
-	}
+	var req model.UpdateUserProfileRequest
+    if err := c.ShouldBindJSON(&req); err != nil {
+        ReturnError400(c, err)
+        return
+    }
 	// 绑定输入的JSON
-	if err := c.ShouldBindJSON(&input); err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil {
 		ReturnError400(c, err)
 		return
 	}
 	// 查询用户信息
 	var profile model.User
-	if err := authController.db.First(&profile, userID).Error; err != nil {
+	if err := ac.db.First(&profile, userID).Error; err != nil {
 		respondJSON(c, http.StatusBadRequest, "没有找到这个用户啊喵", nil)
 		return
 	}
 	// 唯一性校验抽离
-	if err := checkUnique(authController, c, &input, &profile); err != nil {
+	if err := checkUnique(ac, c, &req, &profile); err != nil {
 		return
 	}
 	// 更新字段检查
-	if input.Nickname != "" {
-		profile.Nickname = input.Nickname
+	if req.Nickname != "" {
+		profile.Nickname = req.Nickname
 	}
-	if input.Avatar != "" {
-		profile.Avatar = input.Avatar
+	if req.Avatar != "" {
+		profile.Avatar = req.Avatar
 	}
 	//处理唯一性错误
-	if err := authController.db.Save(&profile).Error; err != nil {
+	if err := ac.db.Save(&profile).Error; err != nil {
 		processError(c, err)
 		return
 	}

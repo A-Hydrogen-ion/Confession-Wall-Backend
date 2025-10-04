@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// User相关
+// User User相关
 // 定义User数据类型
 type User struct {
 	UserID    uint      `gorm:"primaryKey" json:"id"`
@@ -20,7 +20,7 @@ type User struct {
 	UpdateAt  time.Time `gorm:"column:updateAt;not null" json:"updateAt"`
 }
 
-// 表白数据类型
+// Confession 表白数据类型
 type Confession struct {
 	ID          uint      `gorm:"primaryKey"`
 	UserID      uint      `gorm:"not null" json:"userId"`
@@ -34,7 +34,7 @@ type Confession struct {
 	ChangedAt   time.Time `gorm:"column:changedAt;not null" json:"changedAt"`
 }
 
-// 评论数据类型
+// Comment 评论数据类型
 type Comment struct {
 	ID           uint      `gorm:"primaryKey"`
 	UserID       uint      `gorm:"not null" json:"userId"`
@@ -47,7 +47,7 @@ type Comment struct {
 	// 建立外键关系（GORM 会自动生成约束）,默认情况下，任何模型的主键字段都是 ID，所以不需要加references来指向confession的ID
 }
 
-// 小黑屋数据类型
+// Block 小黑屋数据类型
 type Block struct {
 	ID        uint      `gorm:"primaryKey"`
 	UserID    uint      `gorm:"not null" json:"userId"`
@@ -55,7 +55,37 @@ type Block struct {
 	CreatedAt time.Time `gorm:"column:createdAt;not null" json:"createdAt"`
 }
 
-// 创建用户前哈希密码钩子
+// RegisterRequest Register注册相关
+type RegisterRequest struct {
+	Username string `json:"username"   binding:"required,min=3,max=15"`
+	Nickname string `json:"Nickname"   binding:"required,min=2"`
+	Password string `json:"password"   binding:"required,min=8,max=16"`
+} //RegisterRequest结构体将用于处理用户注册请求的数据绑定和验证
+type LoginRequest struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+} //LoginRequest结构体将用于处理用户登录请求的数据绑定和验证
+type AuthResponse struct {
+	UserID uint   `json:"user_id"`
+	Token  string `json:"token"`
+} // AuthResponse结构体用于登录成功后返回用户ID和JWT令牌
+type Response struct {
+	Data string `json:"data"`
+	Msg  string `json:"msg"`
+} // Response结构体用于统一API响应格式，包含数据和消息字段
+// CreateConfessionRequest 表白创建请求相关
+type CreateConfessionRequest struct {
+	Content     string `form:"content" binding:"required"`
+	Anonymous   bool   `form:"anonymous"`
+	Private     bool   `form:"private"`
+	PublishTime string `form:"publish_time"`
+} // CreateConfessionRequest结构体用于处理创建表白请求的数据绑定和验证
+type UpdateUserProfileRequest struct {
+    Nickname string `json:"nickname"`
+    Avatar   string `json:"avatar"`
+    Username string `json:"username"`
+} // UpdateUserProfileRequest结构体用于处理更新用户资料请求的数据绑定和验证
+// BeforeSave 创建用户前哈希密码钩子
 func (u *User) BeforeSave(tx *gorm.DB) error {
 	if len(u.Password) == 0 || isBcryptHash(u.Password) { //如果已经hash过了则跳过hash
 		return nil
@@ -76,8 +106,8 @@ func isBcryptHash(s string) bool {
 	return strings.HasPrefix(s, "$2a$") || strings.HasPrefix(s, "$2b$") || strings.HasPrefix(s, "$2y$")
 }
 
-// 创建用户前创建检查钩子
-func (u *User) BeforeCreate(tx *gorm.DB) error {
+// BeforeCreate 创建用户前创建检查钩子
+func (u *User) BeforeCreate(tx *gorm.DB) error { // 在创建用户前设置默认值
 	// 设置默认昵称
 	if u.Nickname == "" {
 		u.Nickname = u.Username
@@ -94,26 +124,7 @@ func (u *User) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-// 检查密码是否正确
+// CheckPassword 检查密码是否正确
 func (u *User) CheckPassword(password string) error {
 	return bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
-}
-
-// 注册相关
-type RegisterRequest struct {
-	Username string `json:"username"   binding:"required,min=3,max=15"`
-	Nickname string `json:"Nickname"   binding:"required,min=2"`
-	Password string `json:"password"   binding:"required,min=8,max=16"`
-} //RegisterRequest结构体将用于处理用户注册请求的数据绑定和验证
-type LoginRequest struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
-} //LoginRequest结构体将用于处理用户登录请求的数据绑定和验证
-type AuthResponse struct {
-	UserID uint   `json:"user_id"`
-	Token  string `json:"token"`
-} //返回结构体
-type Response struct {
-	Data string `json:"data"`
-	Msg  string `json:"msg"`
 }

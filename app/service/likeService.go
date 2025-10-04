@@ -7,14 +7,14 @@ import (
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/config/database"
 )
 
-// 判断用户是否点赞过
+// HasLiked 判断用户是否点赞过
 func HasLiked(confessionID uint, userID uint) (bool, error) {
 	key := "confession:like:" + strconv.Itoa(int(confessionID))
 	member := strconv.Itoa(int(userID))
 	return database.RedisClient.SIsMember(context.Background(), key, member).Result()
 }
 
-// 赞赞赞赞赞赞赞！
+// LikeConfession 赞赞赞赞赞赞赞！
 func LikeConfession(confessionID uint, userID uint) error {
 	// 用 Set 记录每个用户是否点赞过，防止重复点赞
 	key := "confession:like:" + strconv.Itoa(int(confessionID)) //向 Redis 的 Set（集合）中添加一个用户 ID（member）
@@ -27,7 +27,7 @@ func LikeConfession(confessionID uint, userID uint) error {
 	return nil
 }
 
-// 取消点赞
+// UnlikeConfession 取消点赞
 func UnlikeConfession(confessionID uint, userID uint) error {
 	key := "confession:like:" + strconv.Itoa(int(confessionID))
 	member := strconv.Itoa(int(userID))
@@ -39,7 +39,7 @@ func UnlikeConfession(confessionID uint, userID uint) error {
 	return nil
 }
 
-// 获取点赞数
+// GetLikeCount 获取点赞数
 func GetLikeCount(confessionID uint) (int64, error) {
 	key := "confession:like:" + strconv.Itoa(int(confessionID))
 	// SCARD 返回集合的元素数量，即成员的数量

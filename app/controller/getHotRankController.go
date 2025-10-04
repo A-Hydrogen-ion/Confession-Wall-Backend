@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"net/http"
 	"strconv"
 
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/service"
@@ -14,7 +15,7 @@ func GetHotConfessions(c *gin.Context) {
 	// 由于数组默认从小到大排序，所以使用ZRevRange
 	ids, err := database.RedisClient.ZRevRange(context.Background(), "confession:hot", 0, 9).Result()
 	if err != nil {
-		respondJSON(c, 500, "热度榜获取失败了喵", nil)
+		respondJSON(c, http.StatusInternalServerError, "热度榜获取失败了喵", nil)
 		return
 	}
 	// 转换为 uint 并查数据库详情
@@ -26,8 +27,8 @@ func GetHotConfessions(c *gin.Context) {
 	// 根据ID列表获取表白详情
 	confessions, err := service.GetConfessionsByID(database.DB, confessionIDs)
 	if err != nil {
-		respondJSON(c, 500, "热度榜详情获取失败了喵", nil)
+		respondJSON(c, http.StatusInternalServerError, "热度榜详情获取失败了喵", nil)
 		return
 	}
-	c.JSON(200, gin.H{"data": confessions})
+	c.JSON(http.StatusOK, gin.H{"data": confessions})
 }

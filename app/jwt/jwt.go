@@ -52,7 +52,7 @@ func GenerateToken(UserID uint, username string) (string, error) {
 	return token.SignedString(CustomSecret)
 }
 
-// 解析JWT Token
+// ParseToken 解析JWT Token
 func ParseToken(tokenString string) (*CustomClaims, error) {
 	if len(CustomSecret) == 0 {
 		return nil, errors.New("jwt secret is not configured")

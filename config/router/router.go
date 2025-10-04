@@ -38,7 +38,7 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 		publicConfession.GET("/detail", middleware.OptionalJWTMiddleware(m), confessionController.GetConfessionByID)   // 根据ID获取表白（可选认证）
 		publicConfession.GET("/hot", middleware.OptionalJWTMiddleware(m), controller.GetHotConfessions)                // 获取热度榜（可选认证）
 	}
-	config.Engine.GET("/user/detail", userController.GetUserProfileByID) // 获取用户详情，无需登录，知道用户ID就可以获取
+	config.Engine.GET("api//user/detail", userController.GetUserProfileByID) // 获取用户详情，无需登录，知道用户ID就可以获取
 	api := config.Engine.Group("/api")
 	api.Use(middleware.JWTMiddleware(m)) //需要jwt认证的API公共路由
 	{                                    // 用户相关路由可以在这里添加

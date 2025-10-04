@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// 处理黑名单
+// BlockUser 处理黑名单
 func BlockUser(db *gorm.DB, userID uint, blockedID uint) error {
 	block := &model.Block{
 		UserID:    userID,
@@ -17,7 +17,7 @@ func BlockUser(db *gorm.DB, userID uint, blockedID uint) error {
 	return db.Create(block).Error
 }
 
-// 移除黑名单
+// UnblockUser 移除黑名单
 func UnblockUser(db *gorm.DB, userID uint, blockedID uint) error {
 	return db.Where("user_id = ? AND blocked_id = ?", userID, blockedID).Delete(&model.Block{}).Error
 }
