@@ -3,6 +3,7 @@ config.yaml
 db_data/
 uploads/
 data/
+redis/data/
 
 # local build artifacts
 build/

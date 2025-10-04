@@ -21,6 +21,7 @@ func NewUserController(db *gorm.DB) *UserController {
 	return &UserController{DB: db}
 }
 
+// 获取自己的配置
 func (userController *AuthController) GetMyProfile(c *gin.Context) {
 	// 获取从中间件设置的user_id
 	userID, _ := c.Get("user_id")
@@ -44,7 +45,34 @@ func (userController *AuthController) GetMyProfile(c *gin.Context) {
 		avatarURL = "/uploads/avatars/" + profile.Avatar
 	}
 
-	respondJSON(c, http.StatusOK, "", gin.H{"user_id": profile.UserID, "nickname": profile.Nickname, "avatar": avatarURL})
+	respondJSON(c, http.StatusOK, "获取成功", gin.H{
+		"user_id":  profile.UserID,
+		"nickname": profile.Nickname,
+		"username": profile.Username,
+		"avatar":   avatarURL})
+}
+
+// 通过 user_id 获取用户详情(只展示昵称)
+func (userController *UserController) GetUserProfileByID(c *gin.Context) {
+	userID, err := QueryUint(c, "user_id")
+	if err != nil {
+		respondJSON(c, http.StatusBadRequest, "参数错误喵~", nil)
+		return
+	}
+	var profile model.User
+	if err := userController.DB.First(&profile, userID).Error; err != nil {
+		respondJSON(c, http.StatusNotFound, "没有找到这个用户喵~", nil)
+		return
+	}
+	avatarURL := "/uploads/avatars/default.png"
+	if profile.Avatar != "" {
+		avatarURL = "/uploads/avatars/" + profile.Avatar
+	}
+	respondJSON(c, http.StatusOK, "获取成功", gin.H{
+		"user_id":  profile.UserID,
+		"nickname": profile.Nickname,
+		"avatar":   avatarURL,
+	})
 }
 
 // 更新用户处理，好悬差点没改死我

@@ -33,13 +33,18 @@ func (blockController *BlockController) BlockUser(c *gin.Context) {
 		respondJSON(c, 400, "blocked_id 参数格式错误喵~", nil)
 		return
 	}
-
 	// 调用 service
 	if err := service.BlockUser(blockController.DB, userID, blockedID); err != nil {
 		respondJSON(c, 500, "添加黑名单失败喵~", nil)
 		return
 	}
-	respondJSON(c, http.StatusOK, "这个用户被你拉进小黑屋了喵~", nil)
+	// 拉黑自己提示但不阻止
+	if userID == blockedID {
+		respondJSON(c, http.StatusOK, "你居然把自己拉黑了喵~（已执行）（服务器娘坏笑）", nil)
+	}
+	if userID != blockedID {
+		respondJSON(c, http.StatusOK, "这个用户被你拉进小黑屋了喵~", nil)
+	}
 }
 
 // 将用户移除黑名单

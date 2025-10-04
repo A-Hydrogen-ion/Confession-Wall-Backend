@@ -17,8 +17,8 @@ func SyncRedisToMySQL(db *gorm.DB, confessionIDs []uint) {
 		likeCount, _ := database.RedisClient.SCard(context.Background(), "confession:like:"+strconv.Itoa(int(id))).Result() // 获取点赞数（数组长度）
 		viewCount, _ := database.RedisClient.Get(context.Background(), "confession:view:"+strconv.Itoa(int(id))).Int64()    // 更新到 MySQL
 		db.Model(&model.Confession{}).Where("id = ?", id).Updates(map[string]interface{}{                                   // 类型转换为uint并同步
-			"likeCount": uint(likeCount),
-			"viewCount": uint(viewCount),
+			"like_count": uint(likeCount),
+			"view_count": uint(viewCount),
 		})
 	}
 }
@@ -38,7 +38,7 @@ func UpdateHotRank(confessionIDs []uint) {
 func StartRedisSync(db *gorm.DB) {
 	var confessionIDs []uint
 	db.Model(&model.Confession{}).Pluck("id", &confessionIDs)
-	ticker := time.NewTicker(5 * time.Minute) // 每5分钟同步一次并更新热度榜单
+	ticker := time.NewTicker(30 * time.Second) // 每30秒同步一次并更新热度榜单
 	go func() {
 		for range ticker.C {
 			SyncRedisToMySQL(db, confessionIDs)

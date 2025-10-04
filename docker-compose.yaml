@@ -7,13 +7,20 @@ services:
       - "8080:8080"   # 宿主机 8080 映射到容器 8080
     environment:
       #JWT_SECRET: "${JWT_SECRET}"        # 可在 .env 文件或宿主机传入
+      #注意，环境变量或配置文件二选一，配置文件比环境变量有着更高的优先级
       APP_DATABASE_HOST: 192.168.8.2
       APP_DATABASE_PORT: 3306
       APP_DATABASE_USERNAME: root
       APP_DATABASE_PASSWORD: rootpassword
       APP_DATABASE_NAME: confession
+      SERVER_PORT: 8080
+      SERVER_LISTEN_ADDR: "0.0.0.0"
+      APP_REDIS_ADDR: "localhost:6379"
+      APP_REDIS_PASSWORD: password123
+      APP_REDIS_DB: 0
     depends_on:
       - db
+      - redis
     volumes:
       - ./uploads:/app/uploads  # 持久化上传的图片
       - ./data:/app/data  # 配置文件
@@ -29,3 +36,12 @@ services:
       - "3306:3306"
     volumes:
       - ./db_data:/var/lib/mysql  # 持久化数据库
+  redis:
+    image: redis:latest
+    container_name: confession-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis/data:/data 
+      - ./redis/redis.conf:/etc/redis/redis.conf  # 持久化 Redis 配置

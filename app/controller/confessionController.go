@@ -196,7 +196,18 @@ func (ctrl *ConfessionController) GetConfessionByID(c *gin.Context) {
 	if confession.Anonymous {
 		confession.UserID = 0
 	}
-	c.JSON(http.StatusOK, gin.H{"data": confession})
+	// 查询当前用户是否已点赞
+	liked := false
+	if userID, exists := c.Get("user_id"); exists {
+		l, err := service.HasLiked(confessionID, userID.(uint))
+		if err == nil {
+			liked = l
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"data":  confession,
+		"liked": liked,
+	})
 }
 
 // 获取某用户的所有表白（需登录，排除黑名单和私密）

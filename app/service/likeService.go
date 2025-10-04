@@ -7,6 +7,13 @@ import (
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/config/database"
 )
 
+// 判断用户是否点赞过
+func HasLiked(confessionID uint, userID uint) (bool, error) {
+	key := "confession:like:" + strconv.Itoa(int(confessionID))
+	member := strconv.Itoa(int(userID))
+	return database.RedisClient.SIsMember(context.Background(), key, member).Result()
+}
+
 // 赞赞赞赞赞赞赞！
 func LikeConfession(confessionID uint, userID uint) error {
 	// 用 Set 记录每个用户是否点赞过，防止重复点赞

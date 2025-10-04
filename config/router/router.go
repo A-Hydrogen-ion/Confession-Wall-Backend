@@ -36,17 +36,18 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 		publicConfession.GET("/list", middleware.OptionalJWTMiddleware(m), confessionController.ListPublicConfessions) // 查看社区表白（可选认证）
 		publicConfession.GET("/comment", middleware.OptionalJWTMiddleware(m), commentController.ListComments)          // 查看某条表白的评论（可选认证）
 		publicConfession.GET("/detail", middleware.OptionalJWTMiddleware(m), confessionController.GetConfessionByID)   // 根据ID获取表白（可选认证）
-		publicConfession.GET("/hot", middleware.OptionalJWTMiddleware(m), controller.GetHotConfessions)                // 获取热度榜（可选认证）                                   // 热度榜接口
+		publicConfession.GET("/hot", middleware.OptionalJWTMiddleware(m), controller.GetHotConfessions)                // 获取热度榜（可选认证）
 	}
+	config.Engine.GET("/user/detail", userController.GetUserProfileByID) // 获取用户详情，无需登录，知道用户ID就可以获取
 	api := config.Engine.Group("/api")
 	api.Use(middleware.JWTMiddleware(m)) //需要jwt认证的API公共路由
 	{                                    // 用户相关路由可以在这里添加
 		user := api.Group("/user")
 		{
-			user.GET("/profile", authController.GetMyProfile)
+			user.GET("/profile", authController.GetMyProfile)      //获取自己的配置
 			user.PUT("/profile", authController.UpdateUserProfile) //更新用户信息
-			user.PUT("/avatar", userController.UploadAvatar)
-			user.PUT("/password", authController.ChangePassword) //修改密码
+			user.PUT("/avatar", userController.UploadAvatar)       // 上传头像
+			user.PUT("/password", authController.ChangePassword)   //修改密码
 		}
 		// 受保护的 confession 路由（需要登录）
 		privateConfession := api.Group("/confession")
@@ -58,7 +59,6 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			privateConfession.DELETE("/comment", commentController.DeleteComment)      // 删除评论（需要登录）
 			privateConfession.GET("/user", confessionController.GetUserConfessions)    // 获取某用户所有表白（需要登录）
 			privateConfession.POST("/like", controller.LikeConfession)                 // 点赞表白（需要登录）
-			privateConfession.POST("/unlike", controller.UnlikeConfession)             // 取消点赞表白（需要登录）
 		}
 		block := api.Group("/blacklist")
 		{
