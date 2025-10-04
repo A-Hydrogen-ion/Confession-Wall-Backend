@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	middleware "github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/middleware"
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/model"
@@ -80,9 +81,9 @@ func main() {
 	r = routes.SetupRouter(routerConfig)
 	addr := fmt.Sprintf("%s:%d", host, port)
 	log.Printf("服务启动在 :%s", addr)
-	//go database.HealthMonitor(30 * time.Second) // 每30秒检查一次数据库是否还活着
-	service.StartRedisSync(database.GetDB()) // 启动定时任务，每5分钟同步一次Redis数据到MySQL
-	if err := r.Run(addr); err != nil {      // 启动服务器
+	go database.HealthMonitor(30 * time.Second) // 每30秒检查一次数据库是否还活着
+	service.StartRedisSync(database.GetDB())    // 启动定时任务，每5分钟同步一次Redis数据到MySQL
+	if err := r.Run(addr); err != nil {         // 启动服务器
 		log.Fatalf("服务启动失败啦！: %v", err)
 	}
 }

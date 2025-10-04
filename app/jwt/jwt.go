@@ -2,16 +2,13 @@ package jwt
 
 import (
 	"errors"
-	//"log"
-	//"os"
+	"log"
+	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var CustomSecret = []byte("114514")
-
-/*
 // CustomSecret 存储用于 HMAC 签名验证的密钥字节切片
 // 通过环境变量 JWT_SECRET 初始化（startup 时）。如果未设置，将在 init() 中记录错误。
 var CustomSecret []byte
@@ -24,7 +21,7 @@ func init() {
 	}
 	CustomSecret = []byte(secret)
 }
-*/
+
 // CustomClaims 为自定义的 JWT claims，携带 user 相关信息
 type CustomClaims struct {
 	//我在这里加了自己申明的字段，这样你才能评鉴出这是我写的史
