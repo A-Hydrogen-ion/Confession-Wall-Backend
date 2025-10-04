@@ -36,8 +36,8 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 		publicConfession.GET("/list", middleware.OptionalJWTMiddleware(m), confessionController.ListPublicConfessions) // 查看社区表白（可选认证）
 		publicConfession.GET("/comment", middleware.OptionalJWTMiddleware(m), commentController.ListComments)          // 查看某条表白的评论（可选认证）
 		publicConfession.GET("/detail", middleware.OptionalJWTMiddleware(m), confessionController.GetConfessionByID)   // 根据ID获取表白（可选认证）
+		publicConfession.GET("/hot", middleware.OptionalJWTMiddleware(m), controller.GetHotConfessions)                // 获取热度榜（可选认证）                                   // 热度榜接口
 	}
-
 	api := config.Engine.Group("/api")
 	api.Use(middleware.JWTMiddleware(m)) //需要jwt认证的API公共路由
 	{                                    // 用户相关路由可以在这里添加

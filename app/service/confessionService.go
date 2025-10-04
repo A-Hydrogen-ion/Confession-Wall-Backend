@@ -64,6 +64,13 @@ func GetConfessionByID(db *gorm.DB, confessionID uint) (model.Confession, error)
 	return confession, err
 }
 
+// 根据多个ID获取表白列表（只给热度榜使用）
+func GetConfessionsByID(db *gorm.DB, ids []uint) ([]model.Confession, error) {
+	var confessions []model.Confession
+	err := db.Where("id IN ?", ids).Find(&confessions).Error
+	return confessions, err
+}
+
 // 获取某用户的所有表白（排除黑名单，带分页）
 func GetUserConfessions(db *gorm.DB, targetUserID uint, currentUserID uint, limit int, offset int) ([]model.Confession, error) {
 	var blockedIDs []uint

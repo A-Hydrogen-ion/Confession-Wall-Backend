@@ -142,9 +142,9 @@ func cutimage(img image.Image) image.Image {
 	croppedImg := image.NewRGBA(image.Rect(0, 0, cropLength, cropLength))
 	draw.Draw(croppedImg, croppedImg.Bounds(), img, cropRect.Min, draw.Src)
 
-	// 压缩到固定尺寸 256x256
+	// 压缩到固定尺寸 512x512
 	//我知道这个库万年没更新现在还read-only了，但是我真的找不到替代而且有完整教程的了
-	resizedImg := resize.Resize(256, 256, croppedImg, resize.Lanczos3)
+	resizedImg := resize.Resize(512, 512, croppedImg, resize.Lanczos3)
 	return resizedImg
 }
 

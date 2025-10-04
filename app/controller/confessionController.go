@@ -190,6 +190,8 @@ func (ctrl *ConfessionController) GetConfessionByID(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "没有找到这条表白喵~"})
 		return
 	}
+	// 浏览量+1
+	_ = service.ViewCount(confessionID)
 	// 匿名处理
 	if confession.Anonymous {
 		confession.UserID = 0
