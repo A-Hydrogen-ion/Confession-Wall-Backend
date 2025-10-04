@@ -36,11 +36,12 @@ func UpdateHotRank(confessionIDs []uint) {
 
 // 启动定时任务
 func StartRedisSync(db *gorm.DB) {
-	var confessionIDs []uint
-	db.Model(&model.Confession{}).Pluck("id", &confessionIDs)
 	ticker := time.NewTicker(60 * time.Second) // 每60秒同步一次并更新热度榜单
 	go func() {
 		for range ticker.C {
+			var confessionIDs []uint
+			db.Model(&model.Confession{}).Pluck("id", &confessionIDs) // 获取所有表白ID并同步
+			// 批量同步点赞数和浏览量到 MySQL
 			SyncRedisToMySQL(db, confessionIDs)
 			UpdateHotRank(confessionIDs)
 		}
