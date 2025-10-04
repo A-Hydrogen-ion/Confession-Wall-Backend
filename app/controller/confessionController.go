@@ -165,7 +165,6 @@ func (ctrl *ConfessionController) ListPublicConfessions(c *gin.Context) {
 		ReturnMsg(c, 500, "获取失败了喵~")
 		return
 	}
-	// 匿名处理
 	for i := range confessions {
 		if confessions[i].Anonymous {
 			confessions[i].UserID = 0
