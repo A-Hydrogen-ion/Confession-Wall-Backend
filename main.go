@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	middleware "github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/middleware"
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/model"
 	"gorm.io/gorm"
 
+	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/service"
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/config/config"
 	database "github.com/A-Hydrogen-ion/Confession-Wall-Backend/config/database"
 	routes "github.com/A-Hydrogen-ion/Confession-Wall-Backend/config/router"
@@ -44,7 +46,8 @@ func hel() *gorm.DB { // 数据库健康检查
 	return db
 }
 func migrate(db *gorm.DB) { //数据库迁移及检查函数
-	err := db.AutoMigrate(&model.User{})
+	err := db.AutoMigrate(&model.User{}) //先初始化user表
+	//再初始化剩下的
 	err = db.AutoMigrate(&model.Confession{}, &model.Comment{}, &model.Block{})
 	if err != nil {
 		log.Printf("数据库迁移失败: %v", err)
@@ -54,15 +57,16 @@ func migrate(db *gorm.DB) { //数据库迁移及检查函数
 	}
 }
 func main() {
-	createUploadDirs()      // 创建必要的文件夹
-	config.InitViper()      //读取配置
-	database.ConnectDB()    // 连接数据库
-	if database.DB == nil { // 检查数据库连接是否成功
+	createUploadDirs()           // 创建必要的文件夹
+	config.InitViper()           //读取配置
+	database.ConnectDB()         // 连接数据库
+	if database.GetDB() == nil { // 检查数据库连接是否成功
 		log.Fatal("数据库连接失败，程序退出") //使用Fatal以使程序自动结束
 	}
 	db := hel()                              //健康检查
 	authMiddleware := middleware.NewAuth(db) //获取数据库实例并创建中间件
 	migrate(db)                              // 自动迁移数据库
+	database.InitRedis(database.GetDB())     // 初始化 Redis
 	port := viper.GetInt("server.port")      // 获取配置
 	host := viper.GetString("server.host")
 	if host == "" {
@@ -77,8 +81,9 @@ func main() {
 	r = routes.SetupRouter(routerConfig)
 	addr := fmt.Sprintf("%s:%d", host, port)
 	log.Printf("服务启动在 :%s", addr)
-	//go database.HealthMonitor(30 * time.Second) // 每30秒检查一次数据库是否还活着
-	if err := r.Run(addr); err != nil { // 启动服务器
+	go database.HealthMonitor(30 * time.Second) // 每30秒检查一次数据库是否还活着
+	service.StartRedisSync(database.GetDB())    // 启动定时任务，每1分钟同步一次Redis数据到MySQL
+	if err := r.Run(addr); err != nil {         // 启动服务器
 		log.Fatalf("服务启动失败啦！: %v", err)
 	}
 }

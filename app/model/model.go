@@ -28,6 +28,8 @@ type Confession struct {
 	Images      []string  `gorm:"type:json;serializer:json" json:"images"`
 	Anonymous   bool      `gorm:"not null" json:"Anonymous"`
 	Private     bool      `gorm:"not null" json:"Private"`
+	ViewCount   uint      `gorm:"default:0" json:"viewCount"` // 浏览量
+	LikeCount   uint      `gorm:"default:0" json:"likeCount"` // 点赞量
 	PublishedAt time.Time `gorm:"column:publishedAt;not null" json:"publishedAt"`
 	ChangedAt   time.Time `gorm:"column:changedAt;not null" json:"changedAt"`
 }
@@ -39,7 +41,7 @@ type Comment struct {
 	ConfessionID uint      `gorm:"not null;index" json:"confession_id"` // 来自表白数据类型的外键字段，以让评论和表白绑定在一起，同时在main.go中添加自动迁移来让gorm知道这个表结构和外键
 	Content      string    `gorm:"type:text;not null" json:"content"`
 	CreatedAt    time.Time `gorm:"column:createdAt;not null" json:"createdAt"`
-	User         User      `gorm:"foreignKey:UserID" json:"user"` // 建立来自user的外键关系（GORM 会自动生成约束）
+	User         User      `gorm:"foreignKey:UserID;references:UserID" json:"user"` // 建立来自user的外键关系（GORM 会自动生成约束）
 
 	Confession Confession `gorm:"foreignKey:ConfessionID;constraint:OnDelete:CASCADE;" json:"-"`
 	// 建立外键关系（GORM 会自动生成约束）,默认情况下，任何模型的主键字段都是 ID，所以不需要加references来指向confession的ID
@@ -99,7 +101,7 @@ func (u *User) CheckPassword(password string) error {
 
 // 注册相关
 type RegisterRequest struct {
-	Username string `json:"username"   binding:"required,min=3,max=10"`
+	Username string `json:"username"   binding:"required,min=3,max=15"`
 	Nickname string `json:"Nickname"   binding:"required,min=2"`
 	Password string `json:"password"   binding:"required,min=8,max=16"`
 } //RegisterRequest结构体将用于处理用户注册请求的数据绑定和验证

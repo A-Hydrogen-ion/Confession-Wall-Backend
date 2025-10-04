@@ -37,12 +37,6 @@ func JWTMiddleware(m Auth) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		// 检查用户状态（小黑屋功能）
-		// if user.Status == "banned" {
-		// 	controller.ReturnMsg(c, http.StatusForbidden, "这个用户被拉进小黑屋了喵")
-		// 	c.Abort()
-		// 	return
-		// }
 		// 将用户信息保存到请求的上下文
 		c.Set("user_id", user.UserID)
 		c.Set("username", user.Username)
@@ -53,7 +47,11 @@ func JWTMiddleware(m Auth) gin.HandlerFunc {
 }
 func (m *Auth) JWTMiddlewareLight() gin.HandlerFunc { // 轻量级验证版本，不查询数据库（仅验证token）
 	return func(c *gin.Context) {
+		// 解析 token（若解析失败，tokenCheck 会处理并 Abort）
 		claims := tokenCheck(c, authHeaderCheck(c))
+		if claims == nil {
+			return
+		}
 		// 仅从token中获取用户信息，不查询数据库
 		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username) // 确保你的claims包含username

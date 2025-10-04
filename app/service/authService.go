@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/model"
-	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/config/database"
 	"gorm.io/gorm"
 )
 
@@ -14,11 +13,13 @@ type UserService struct {
 	db *gorm.DB
 }
 
-func NewUserService() *UserService { // 检查数据库指针函数
-	if database.DB == nil {
-		log.Println("警告: database.DB 为 nil，UserService 将无法工作")
+// 通过NewUserService 创建一个新的 UserService 实例
+// 这样做可以使得之后测试数据库和实际使用的数据库不互相干扰
+func NewUserService(db *gorm.DB) *UserService {
+	if db == nil {
+		log.Println("警告: 传入的 db 为 nil，UserService 将无法工作")
 	}
-	return &UserService{db: database.DB}
+	return &UserService{db: db}
 }
 func (s *UserService) checkFieldExists(fieldName, value string) (bool, error) { //检查特定字段是否存在
 	if s.db == nil {
@@ -29,6 +30,7 @@ func (s *UserService) checkFieldExists(fieldName, value string) (bool, error) { 
 		Where(fieldName+" = ?", value).
 		Count(&count).Error
 	if err != nil {
+		// 记录底层错误，返回通用错误消息给调用方
 		log.Printf("数据库查询错误[字段%s]: %v", fieldName, err)
 		return false, fmt.Errorf("系统繁忙，请稍后重试")
 	}
@@ -62,6 +64,7 @@ func (s *UserService) CreateUser(user *model.User) error {
 	}
 	// 创建用户
 	if err := s.db.Create(user).Error; err != nil {
+		// MySQL 的重复键错误在不同驱动返回中可能包含不同文本，简单包含判断以提供友好信息
 		if strings.Contains(err.Error(), "Duplicate entry") {
 			return fmt.Errorf("用户名或昵称已存在")
 		}

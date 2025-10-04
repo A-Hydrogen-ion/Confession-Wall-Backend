@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"os"
-	"strconv"
+	"time"
 
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/model"
 	"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/service"
@@ -23,17 +23,23 @@ func CreateConfessionController(db *gorm.DB) *ConfessionController {
 	return &ConfessionController{DB: db}
 }
 
-// QueryUint 从请求 query 中获取参数并转换为 uint
-func QueryUint(c *gin.Context, key string) (uint, error) {
-	valStr := c.Query(key)
-	if valStr == "" {
-		return 0, errors.New(key + " 参数为空")
+// ParsePublishTime 统一解析和校验定时发布时间
+func ParsePublishTime(publishTimeStr string, maxDelay time.Duration) (time.Time, error) {
+	now := time.Now()
+	if publishTimeStr == "" {
+		return now, nil
 	}
-	valUint64, err := strconv.ParseUint(valStr, 10, 64)
+	publishTime, err := time.Parse(time.RFC3339, publishTimeStr)
 	if err != nil {
-		return 0, errors.New(key + " 参数无效")
+		return time.Time{}, errors.New("定时发布时间格式不正确喵，请使用RFC3339格式哦~")
 	}
-	return uint(valUint64), nil
+	if publishTime.After(now.Add(maxDelay)) {
+		return time.Time{}, errors.New("定时发布时间不能超过一周喵~")
+	}
+	if publishTime.Before(now.Add(-1 * time.Minute)) {
+		return time.Time{}, errors.New("过去的表白时间不被允许哦喵~")
+	}
+	return publishTime, nil
 }
 
 // 发布表白
@@ -41,10 +47,18 @@ func (ctrl *ConfessionController) CreateConfession(c *gin.Context) {
 	content := c.PostForm("content")
 	anonymous := c.PostForm("anonymous") == "true" //发布的表白是否匿名
 	private := c.PostForm("private") == "true"     //发布的表白是否私密
+	publishTimeStr := c.PostForm("publish_time")   // 前端传递的定时发布时间（可选）
+	var publishTime time.Time
+	maxDelay := 7 * 24 * time.Hour                                 // 最大允许定时发布延迟为7天
+	publishTime, err := ParsePublishTime(publishTimeStr, maxDelay) //调用统一的时间解析函数
+	if err != nil {
+		respondJSON(c, 400, err.Error(), nil)
+		return
+	}
 	//判断用户有没有登录
 	userID, exists := c.Get("user_id")
 	if !exists {
-		ReturnMsg(c, 401, "只有登录的孩子才能发布表白喵~")
+		respondJSON(c, 401, "只有登录的孩子才能发布表白喵~", nil)
 		return
 	}
 
@@ -57,30 +71,30 @@ func (ctrl *ConfessionController) CreateConfession(c *gin.Context) {
 	}
 	// 保存表白与发布人的ID和表白属性
 	confession := model.Confession{
-		UserID:    userID.(uint),
-		Content:   content,
-		Images:    imagePaths,
-		Anonymous: anonymous,
-		Private:   private,
+		UserID:      userID.(uint),
+		Content:     content,
+		Images:      imagePaths,
+		Anonymous:   anonymous,
+		Private:     private,
+		PublishedAt: publishTime, //单独在controller里处理发布时间
 	}
 	if err := service.CreateConfession(ctrl.DB, &confession); err != nil {
 		ReturnError400(c, err)
 		return
 	}
-	ReturnMsg(c, http.StatusOK, "发布成功了喵~")
+	respondJSON(c, http.StatusOK, "发布成功了喵~", nil)
 }
 
 // 修改表白,返回错误统一调用authcontroller里的returnmsg
 func (ctrl *ConfessionController) UpdateConfession(c *gin.Context) {
-	confessionIDStr := c.PostForm("confession_id")
-	confessionID, err := strconv.ParseUint(confessionIDStr, 10, 64)
+	confessionID, err := GetUintParam(c, "confession_id")
 	if err != nil {
-		ReturnMsg(c, 400, "服务器娘没有查询到这个表白，可能已经被删除了喵~")
+		ReturnMsg(c, 400, "服务器娘没有查询到这个表白，可能已经被删除了喵~") //错误处理
 		return
 	}
 	userID, exists := c.Get("user_id")
 	if !exists {
-		ReturnMsg(c, 401, "只有登录的孩子才能修改表白喵~")
+		ReturnMsg(c, 401, "只有登录的孩子才能修改表白喵~") //需要登录
 		return
 	}
 	var confession model.Confession
@@ -93,6 +107,16 @@ func (ctrl *ConfessionController) UpdateConfession(c *gin.Context) {
 		return
 	}
 	newContent := c.PostForm("content")
+	publishTimeStr := c.PostForm("publish_time")
+	maxDelay := 7 * 24 * time.Hour // 最大允许定时发布延迟为7天
+	if publishTimeStr != "" {
+		publishTime, err := ParsePublishTime(publishTimeStr, maxDelay) //调用统一的时间解析函数
+		if err != nil {
+			ReturnMsg(c, 400, err.Error())
+			return
+		}
+		confession.PublishedAt = publishTime //此处与发布表白不同！不传入则保持原有发布时间不变
+	}
 	form, err := c.MultipartForm()
 	if err != nil {
 		ReturnMsg(c, 400, "图片因为某些原因上传失败了喵")
@@ -132,12 +156,8 @@ func (ctrl *ConfessionController) ListPublicConfessions(c *gin.Context) {
 		uid = userID.(uint)
 	}
 	// 解析分页参数
-	limitStr := c.DefaultQuery("PageLimit", "10")
-	offsetStr := c.DefaultQuery("Page", "0")
-	limit, err1 := strconv.Atoi(limitStr)
-	offset, err2 := strconv.Atoi(offsetStr)
-	if err1 != nil || err2 != nil || limit < 1 || offset < 0 {
-		ReturnMsg(c, 400, "分页参数不合法喵，你看看你都传入了些什么分页，服务器娘愤怒的告诉你她找不到负数的页码")
+	limit, offset, ok := ParsePagination(c)
+	if !ok {
 		return
 	}
 	confessions, err := service.ListPublicConfessions(ctrl.DB, uid, limit, offset)
@@ -169,18 +189,31 @@ func (ctrl *ConfessionController) GetConfessionByID(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "没有找到这条表白喵~"})
 		return
 	}
+	// 浏览量+1
+	_ = service.ViewCount(confessionID)
 	// 匿名处理
 	if confession.Anonymous {
 		confession.UserID = 0
 	}
-	c.JSON(http.StatusOK, gin.H{"data": confession})
+	// 查询当前用户是否已点赞
+	liked := false
+	if userID, exists := c.Get("user_id"); exists {
+		l, err := service.HasLiked(confessionID, userID.(uint))
+		if err == nil {
+			liked = l
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"data":  confession,
+		"liked": liked,
+	})
 }
 
 // 获取某用户的所有表白（需登录，排除黑名单和私密）
 func (ctrl *ConfessionController) GetUserConfessions(c *gin.Context) {
 	currentUserID, exists := c.Get("user_id")
 	if !exists {
-		ReturnMsg(c, 401, "你需要登录才能查看哦喵~")
+		respondJSON(c, 401, "你需要登录才能查看哦喵~", nil)
 		return
 	}
 	targetUserID, err := QueryUint(c, "user_id")
@@ -189,12 +222,8 @@ func (ctrl *ConfessionController) GetUserConfessions(c *gin.Context) {
 		return
 	}
 	// 解析分页参数
-	limitStr := c.DefaultQuery("PageLimit", "10")
-	offsetStr := c.DefaultQuery("Page", "0")
-	limit, err1 := strconv.Atoi(limitStr)
-	offset, err2 := strconv.Atoi(offsetStr)
-	if err1 != nil || err2 != nil || limit < 1 || offset < 0 {
-		ReturnMsg(c, 400, "分页参数不合法喵，你看看你都传入了些什么分页，服务器娘愤怒的告诉你她找不到负数的页码")
+	limit, offset, ok := ParsePagination(c)
+	if !ok {
 		return
 	}
 	confessions, err := service.GetUserConfessions(ctrl.DB, targetUserID, currentUserID.(uint), limit, offset)
@@ -219,7 +248,7 @@ func (ctrl *ConfessionController) DeleteConfession(c *gin.Context) {
 	}
 	userID, exists := c.Get("user_id")
 	if !exists {
-		ReturnMsg(c, 401, "你需要登录才能删除表白喵~")
+		respondJSON(c, 401, "你需要登录才能删除表白喵~", nil)
 		return
 	}
 	// 查询表白，确认是自己发的才能删

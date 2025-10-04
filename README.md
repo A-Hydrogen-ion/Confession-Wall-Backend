@@ -33,16 +33,17 @@ Confession-Wall-Backend/    <br>
 等待与前端对接中……
 
 ### 扩展的功能 
-![](https://geps.dev/progress/29?dangerColor=FFA500&warningColor=39c5bb&successColor=66ccff)
+![](https://geps.dev/progress/89?dangerColor=FFA500&warningColor=39c5bb&successColor=66ccff)
 
-- [ ] ~~相同文件去重处理~~不会开发，因为部署服务端可在文件系统层面上实现这个功能
-- [ ] 表白消息定时发送
-- [ ] 表白可以被点赞或取消点赞
-- [ ] 基于表白点赞数和浏览量进行热度排序（热度=点赞数*3+表白数\*2），实现表白热度榜单
+- [x] ~~相同文件去重处理~~不会开发，因为部署服务端可在文件系统层面上实现这个功能
+- [x] 表白消息定时发送
+- [x] 记录表白浏览量
+- [x] 表白可以被点赞或取消点赞
+- [x] 基于表白点赞数和浏览量进行热度排序（热度=点赞数*3+表白数\*2），实现表白热度榜单
 - [x] 在docker环境下构建镜像运行以方便全平台部署
 - [x] 成功部署到云端服务器，不依赖dokcer环境
-- [ ] 使用https进行访问
-
+- [x] 使用https进行访问
+- [ ] 将前后端整合，后端只允许被本地地址访问以提升安全性
 ## 本地运行
 
 ### 使用docker(推荐)
@@ -69,16 +70,23 @@ services:
       - "8080:8080"   # 宿主机 8080 映射到容器 8080
     environment:
       #JWT_SECRET: "${JWT_SECRET}"        # 可在 .env 文件或宿主机传入
-      APP_DATABASE_HOST: 192.168.2.6       
-      APP_DATABASE_PORT: 3306
-      APP_DATABASE_USERNAME: root
-      APP_DATABASE_PASSWORD: rootpassword
-      APP_DATABASE_NAME: confession
+      #注意，环境变量或配置文件二选一，配置文件比环境变量有着更高的优先级
+      SERVER_PORT: 8080 #服务监听端口
+      SERVER_LISTEN_ADDR: "0.0.0.0"  #服务监听地址
+      APP_DATABASE_HOST: 192.168.8.2 #数据库地址
+      APP_DATABASE_PORT: 3306        #数据库端口
+      APP_DATABASE_USERNAME: root    #数据库用户
+      APP_DATABASE_PASSWORD: rootpassword   #数据库密码
+      APP_DATABASE_NAME: confession  #数据库名称
+      APP_REDIS_ADDR: "localhost:6379"      #redis地址
+      APP_REDIS_PASSWORD: password123       #redis密码
+      APP_REDIS_DB: 0                #redis数据库
     depends_on:
       - db
+      - redis
     volumes:
       - ./uploads:/app/uploads  # 持久化上传的图片
-      - ./data:/app/data  # 配置文件和环境变量二选一
+      - ./data:/app/data  # 配置文件
 
   db:
     image: mysql:latest
@@ -91,12 +99,27 @@ services:
       - "3306:3306"
     volumes:
       - ./db_data:/var/lib/mysql  # 持久化数据库
+  redis:
+    image: redis:latest
+    container_name: confession-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis/data:/data  
+      - ./redis/redis.conf:/etc/redis/redis.conf  # 持久化 Redis 配置
 ```
-4. 在dockercompose文件夹同目录下创建`uploads`和`data`与`db_data`文件夹持久化存放数据
+4. 在dockercompose文件夹同目录下创建`uploads`和`data`与`db_data` `redis`文件夹持久化存放数据
 ```bash
-mkdir uploads data db_data
+mkdir uploads data db_data redis/data
 ```
-5. （可选）将config.yaml配置文件拷贝到`data`目录下，配置文件比环境变量有更高的优先级
+
+5. 将redis配置文件拷贝
+```bash
+cp /path/to/yourproject/redis/redis.conf redis/
+```
+
+（可选）将config.yaml配置文件拷贝到`data`目录下，配置文件比环境变量有更高的优先级
 ```bash
 cp /path/to/yourproject/config/config.example.yaml config.yaml
 ```
