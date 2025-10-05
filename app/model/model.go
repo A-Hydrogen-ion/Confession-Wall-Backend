@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 // User User相关
@@ -85,7 +86,7 @@ type UpdateUserProfileRequest struct {
 	Username string `json:"username"`
 } // UpdateUserProfileRequest结构体用于处理更新用户资料请求的数据绑定和验证
 // BeforeSave 创建用户前哈希密码钩子
-func (u *User) BeforeSave() error {
+func (u *User) BeforeSave(tx *gorm.DB) error {
 	if len(u.Password) == 0 || isBcryptHash(u.Password) { //如果已经hash过了则跳过hash
 		return nil
 	}
@@ -106,7 +107,7 @@ func isBcryptHash(s string) bool {
 }
 
 // BeforeCreate 创建用户前创建检查钩子
-func (u *User) BeforeCreate() error { // 在创建用户前设置默认值
+func (u *User) BeforeCreate(tx *gorm.DB) error { // 在创建用户前设置默认值
 	// 设置默认昵称
 	if u.Nickname == "" {
 		u.Nickname = u.Username
