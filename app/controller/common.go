@@ -2,6 +2,7 @@ package controller
 
 import (
 	"errors"
+	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -68,4 +69,13 @@ func GetUintParam(c *gin.Context, key string) (uint, error) {
 		return 0, errors.New(key + " 参数无效")
 	}
 	return 0, errors.New(key + " 参数为空")
+}
+func checkUserByID(c *gin.Context, errmsg string) uint { //辅助函数检查用户ID
+	userIDValue, exists := c.Get("user_id") // 获取当前用户 ID
+	if !exists {                            //未登录处理
+		respondJSON(c, http.StatusUnauthorized, errmsg, nil)
+		return 0
+	}
+	userID := userIDValue.(uint)
+	return userID
 }

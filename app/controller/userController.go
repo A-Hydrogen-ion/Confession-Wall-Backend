@@ -2,7 +2,7 @@ package controller
 
 import (
 	"errors"
-	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -77,16 +77,15 @@ func (userController *UserController) GetUserProfileByID(c *gin.Context) {
 
 // UpdateUserProfile 更新用户处理，好悬差点没改死我
 func (ac *AuthController) UpdateUserProfile(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		respondJSON(c, http.StatusUnauthorized, "用户没有登陆啊喵", nil)
+	userID := checkUserByID(c, "用户没有登陆啊喵") //辅助函数检查用户ID
+	if userID == 0 {
 		return
 	}
 	var req model.UpdateUserProfileRequest
-    if err := c.ShouldBindJSON(&req); err != nil {
-        ReturnError400(c, err)
-        return
-    }
+	if err := c.ShouldBindJSON(&req); err != nil {
+		ReturnError400(c, err)
+		return
+	}
 	// 绑定输入的JSON
 	if err := c.ShouldBindJSON(&req); err != nil {
 		ReturnError400(c, err)
@@ -161,20 +160,19 @@ func processError(c *gin.Context, err error) {
 		ReturnMsg(c, http.StatusBadRequest, "存在重复的唯一字段")
 		return
 	}
-	fmt.Print(err.Error())
+	log.Println(err.Error())
 	ReturnMsg(c, http.StatusInternalServerError, "存在重复的唯一字段")
 }
 
 // UploadAvatar 上传用户头像
 func (userController *UserController) UploadAvatar(c *gin.Context) {
 	// 获取登录用户ID
-	userID, exists := c.Get("user_id")
-	if !exists {
-		respondJSON(c, http.StatusUnauthorized, "你还没有登录喵~", nil)
+	userID := checkUserByID(c, "你还没有登录喵~")
+	if userID == 0 {
 		return
 	}
 	// 调用服务层处理上传的头像，服务层将对头像自动裁剪和压缩
-	path, err := service.UploadAvatar(c, userID.(uint))
+	path, err := service.UploadAvatar(c, userID)
 	if err != nil {
 		ReturnError400(c, err)
 		return

@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -92,7 +93,8 @@ func (ac *AuthController) IsNicknameExist(c *gin.Context, input string) bool {
 func (ac *AuthController) Register(c *gin.Context) {
 	var input models.RegisterRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
-		validationErrors, ok := err.(validator.ValidationErrors)
+		var validationErrors validator.ValidationErrors
+		ok := errors.As(err, &validationErrors)
 		if ok {
 			checkInputRequirement(c, validationErrors) //调用输入错误处理函数
 			return
@@ -159,7 +161,8 @@ func (ac *AuthController) ChangePassword(c *gin.Context) {
 	var req ChangePassword
 	// 绑定输入的JSON
 	if err := c.ShouldBindJSON(&req); err != nil {
-		validationErrors, ok := err.(validator.ValidationErrors)
+		var validationErrors validator.ValidationErrors
+		ok := errors.As(err, &validationErrors)
 		// 判断输入
 		if ok {
 			checkInputRequirement(c, validationErrors)
@@ -169,16 +172,14 @@ func (ac *AuthController) ChangePassword(c *gin.Context) {
 		return
 	}
 
-	// 获取当前登录用户ID
-	userIDValue, exists := c.Get("user_id")
-	if !exists {
-		ReturnMsg(c, http.StatusUnauthorized, "你还没有登录喵，服务器娘不知道你是谁")
+	// 获取当前登录用户ID,使用辅助函数
+	userIDValue := checkUserByID(c, "你还没有登录喵，服务器娘不知道你是谁")
+	if userIDValue == 0 {
 		return
 	}
-	userID := userIDValue.(uint)
 
-	// 查找用户
-	user, err := ac.userService.GetUserByID(userID)
+	// 查找用户模块
+	user, err := ac.userService.GetUserByID(userIDValue)
 	if err != nil {
 		ReturnMsg(c, http.StatusBadRequest, "你要修改的用户不存在喵~")
 		return

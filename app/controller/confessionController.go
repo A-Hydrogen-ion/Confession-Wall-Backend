@@ -15,11 +15,11 @@ import (
 // ConfessionController 控制器
 // 需要在 router 注册时加 JWT 中间件
 // 注册数据包
-type ConfessionController struct {
+type ConfessionController struct { //控制器
 	DB *gorm.DB
 }
 
-func CreateConfessionController(db *gorm.DB) *ConfessionController {
+func CreateConfessionController(db *gorm.DB) *ConfessionController { //返回控制器实例
 	return &ConfessionController{DB: db}
 }
 
@@ -65,8 +65,8 @@ func (ctrl *ConfessionController) CreateConfession(c *gin.Context) {
 		return
 	}
 	//判断用户有没有登录
-	userID, err := GetUserID(c)
-	if err != nil {
+	userID := checkUserByID(c, "只有登录的孩子才能发布表白喵~")
+	if userID == 0 { //id为0说明没登录
 		return
 	}
 
@@ -100,9 +100,9 @@ func (ctrl *ConfessionController) UpdateConfession(c *gin.Context) {
 	if confession.ID == 0 {
 		return //检查失败直接返回
 	}
-	//获取用户ID
-	userID, err := GetUserID(c)
-	if err != nil {
+	//调用辅助函数获取用户ID
+	userID := checkUserByID(c, "你还没有登录喵，服务器娘不知道你是谁")
+	if userID == 0 {
 		return
 	}
 	//获取新的内容和图片
@@ -176,8 +176,9 @@ func (ctrl *ConfessionController) CheckInput(c *gin.Context) model.Confession {
 // ListPublicConfessions 查看社区表白
 func (ctrl *ConfessionController) ListPublicConfessions(c *gin.Context) {
 	var uid uint = 0
-	if userID, exists := c.Get("user_id"); exists {
-		uid = userID.(uint)
+	userID := checkUserByID(c, "你还没有登录喵，服务器娘不知道你是谁")
+	if userID == 0 {
+		return
 	}
 	// 解析分页参数
 	limit, offset, ok := ParsePagination(c)
@@ -235,9 +236,8 @@ func (ctrl *ConfessionController) GetConfessionByID(c *gin.Context) {
 
 // GetUserConfessions 获取某用户的所有表白（需登录，排除黑名单和私密）
 func (ctrl *ConfessionController) GetUserConfessions(c *gin.Context) {
-	currentUserID, exists := c.Get("user_id")
-	if !exists {
-		respondJSON(c, http.StatusUnauthorized, "你需要登录才能查看哦喵~", nil)
+	currentUserID := checkUserByID(c, "你需要登录才能查看哦喵~")
+	if currentUserID == 0 {
 		return
 	}
 	targetUserID, err := QueryUint(c, "user_id")
@@ -250,7 +250,7 @@ func (ctrl *ConfessionController) GetUserConfessions(c *gin.Context) {
 	if !ok {
 		return
 	}
-	confessions, err := service.GetUserConfessions(ctrl.DB, targetUserID, currentUserID.(uint), limit, offset)
+	confessions, err := service.GetUserConfessions(ctrl.DB, targetUserID, currentUserID, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "服务器娘宕机了,获取TA的表白失败了喵"})
 		return
@@ -270,9 +270,8 @@ func (ctrl *ConfessionController) DeleteConfession(c *gin.Context) {
 		ReturnError400(c, err)
 		return
 	}
-	userID, exists := c.Get("user_id")
-	if !exists {
-		respondJSON(c, http.StatusUnauthorized, "你需要登录才能删除表白喵~", nil)
+	userID := checkUserByID(c, "你需要登录才能删除表白喵~")
+	if userID == 0 {
 		return
 	}
 	// 查询表白，确认是自己发的才能删
@@ -281,13 +280,13 @@ func (ctrl *ConfessionController) DeleteConfession(c *gin.Context) {
 		ReturnMsg(c, http.StatusNotFound, "服务器娘没有查询到这个表白，可能已经被删除了喵~")
 		return
 	}
-	if confession.UserID != userID.(uint) {
+	if confession.UserID != userID {
 		ReturnMsg(c, http.StatusForbidden, "不能删除别人的表白，你个hentai!")
 		return
 	}
 	// 调用 service 层删除表白和评论
 	if err := service.DeleteConfession(ctrl.DB, confessionID); err != nil {
-		ReturnMsg(c, 500, "服务器娘宕机了，删除失败了喵~")
+		ReturnMsg(c, http.StatusInternalServerError, "服务器娘宕机了，删除失败了喵~")
 		return
 	}
 	ReturnMsg(c, http.StatusOK, "表白成功删除了喵~")

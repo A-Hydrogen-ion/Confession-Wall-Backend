@@ -110,37 +110,21 @@ func UploadAvatar(c *gin.Context, userID uint) (string, error) {
 			log.Printf("关闭文件失败: %v", err) // 这里只能打印日志，不能 return，因为 defer 里 return 没意义
 		}
 	}()
-	//限制图片最大大小
-	maxSize := int64(5 * 1024 * 1024)
-	//调用校验图片类型和大小的函数
-	if err := validateImage(header, maxSize); err != nil {
+	maxSize := int64(5 * 1024 * 1024)                      //限制图片最大大小
+	if err := validateImage(header, maxSize); err != nil { //调用校验图片类型和大小的函数
 		return "", err
 	}
-	// 读取文件内容
-	//校验通过后重新打开文件
-	file, err = header.Open()
-	ext := strings.ToLower(filepath.Ext(header.Filename))
-	//对图片进行解码
-	var img image.Image
-	switch {
-	case ext == ".png":
-		img, err = png.Decode(file)
-		if err != nil {
-			return "", fmt.Errorf("PNG图片解码失败: %v", err)
-		}
-	case ext == ".jpg" || ext == ".jpeg":
-		img, err = jpeg.Decode(file)
-		if err != nil {
-			return "", fmt.Errorf("JPG图片解码失败: %v", err)
-		}
-	case ext == ".webp": //image 包默认不支持 webp 格式的解码
-		return "", fmt.Errorf("webp格式的图片暂时不支持作为头像喵，请转换成jpg或png格式后再上传")
-	default:
-		return "", fmt.Errorf("服务器娘看不懂你上传的图片喵: 不支持的图片格式")
+	file, err = header.Open() // 读取文件内容，校验通过后重新打开文件
+	if err != nil {
+		return "", fmt.Errorf("图片打开失败，服务器娘理解不了你上传了什么: %v", err) //
 	}
-	resizedImg := cutImage(img)
-	//设置图片存储路径
-	saveDir := "uploads/avatars/"
+	ext := strings.ToLower(filepath.Ext(header.Filename))
+	img, err := decodingImage(file, ext) //调用解码函数对图片进行解码
+	if err != nil {
+		return "", err
+	}
+	resizedImg := cutImage(img)   //调用裁剪和压缩函数处理图片
+	saveDir := "uploads/avatars/" //设置图片存储路径
 	savePath := fmt.Sprintf("%savatar_%d%s", saveDir, userID, ext)
 	out, err := os.Create(savePath)
 	if err != nil {
@@ -151,12 +135,7 @@ func UploadAvatar(c *gin.Context, userID uint) (string, error) {
 			log.Printf("关闭 out 文件失败: %v", err)
 		}
 	}()
-	if ext == ".png" {
-		err = png.Encode(out, resizedImg)
-	} else {
-		//写入时将图片压缩
-		err = jpeg.Encode(out, resizedImg, &jpeg.Options{Quality: 85})
-	}
+	err = EncodingImage(resizedImg, ext, out) //调用编码函数对图片进行编码并写入文件
 	if err != nil {
 		return "", fmt.Errorf("写入头像失败，服务器娘不小心把你的头像弄丢了: %v", err)
 	}
@@ -194,7 +173,7 @@ func validateImage(fileHeader *multipart.FileHeader, maxSize int64) error {
 	}
 	file, err := fileHeader.Open()
 	if err != nil {
-		return fmt.Errorf("图片打开失败，服务器娘理解不了你上传了什么: %v", err)//
+		return fmt.Errorf("图片打开失败，服务器娘理解不了你上传了什么: %v", err) //
 	}
 	defer func() {
 		if err := file.Close(); err != nil {
@@ -208,4 +187,39 @@ func validateImage(fileHeader *multipart.FileHeader, maxSize int64) error {
 		return fmt.Errorf("服务器娘看不懂你上传的图片喵，只允许jpg/png/webp类型的图片哦: %s", filetype) // 只允许jpg/png/webp类型
 	}
 	return nil
+}
+
+// 根据扩展名解码图片
+func decodingImage(file multipart.File, ext string) (image.Image, error) {
+	var img image.Image
+	var err error
+	switch {
+	case ext == ".png":
+		img, err = png.Decode(file)
+		if err != nil {
+			return nil, fmt.Errorf("PNG图片解码失败: %v", err)
+		}
+	case ext == ".jpg" || ext == ".jpeg":
+		img, err = jpeg.Decode(file)
+		if err != nil {
+			return nil, fmt.Errorf("JPG图片解码失败: %v", err)
+		}
+	case ext == ".webp": //image 包默认不支持 webp 格式的解码
+		return nil, fmt.Errorf("webp格式的图片暂时不支持作为头像喵，请转换成jpg或png格式后再上传")
+	default:
+		return nil, fmt.Errorf("服务器娘看不懂你上传的图片喵: 不支持的图片格式")
+	}
+	return img, nil
+}
+
+// EncodingImage 根据扩展名编码图片
+func EncodingImage(img image.Image, ext string, out io.Writer) error {
+	switch {
+	case ext == ".png":
+		return png.Encode(out, img)
+	case ext == ".jpg" || ext == ".jpeg":
+		return jpeg.Encode(out, img, &jpeg.Options{Quality: 85})
+	default:
+		return fmt.Errorf("不支持的图片格式")
+	}
 }
