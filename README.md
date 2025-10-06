@@ -33,7 +33,7 @@ Confession-Wall-Backend/    <br>
 等待与前端对接中……
 
 ### 扩展的功能 
-![](https://geps.dev/progress/89?dangerColor=FFA500&warningColor=39c5bb&successColor=66ccff)
+![](https://geps.dev/progress/96?dangerColor=FFA500&warningColor=39c5bb&successColor=66ccff)
 
 - [x] ~~相同文件去重处理~~不会开发，因为部署服务端可在文件系统层面上实现这个功能
 - [x] 表白消息定时发送
@@ -43,7 +43,7 @@ Confession-Wall-Backend/    <br>
 - [x] 在docker环境下构建镜像运行以方便全平台部署
 - [x] 成功部署到云端服务器，不依赖dokcer环境
 - [x] 使用https进行访问
-- [ ] 将前后端整合，后端只允许被本地地址访问以提升安全性
+- [x] 将前后端整合，后端只允许被本地地址访问以提升安全性
 ## 本地运行
 
 ### 使用docker(推荐)
@@ -66,14 +66,15 @@ services:
     image: confession-wall:latest
     container_name: confession-wall
     restart: unless-stopped
-    ports:
-      - "8080:8080"   # 宿主机 8080 映射到容器 8080
+    #生产环境下，后端、数据库、redis缓存将不再暴露至容器网络外部，有调试需要请自行取消注释
+    #ports:
+    #  - "8080:8080"   # 宿主机 8080 映射到容器 8080
     environment:
       #JWT_SECRET: "${JWT_SECRET}"        # 可在 .env 文件或宿主机传入
       #注意，环境变量或配置文件二选一，配置文件比环境变量有着更高的优先级
       SERVER_PORT: 8080 #服务监听端口
-      SERVER_LISTEN_ADDR: "0.0.0.0"  #服务监听地址
-      APP_DATABASE_HOST: 192.168.8.2 #数据库地址
+      SERVER_LISTEN_ADDR: "localhost"  #服务监听地址，生产环境建议只监听本地接口不修改本项
+      APP_DATABASE_HOST: localhost #数据库地址
       APP_DATABASE_PORT: 3306        #数据库端口
       APP_DATABASE_USERNAME: root    #数据库用户
       APP_DATABASE_PASSWORD: rootpassword   #数据库密码
@@ -84,10 +85,23 @@ services:
     depends_on:
       - db
       - redis
+      - nginx
     volumes:
       - ./uploads:/app/uploads  # 持久化上传的图片
-      - ./data:/app/data  # 配置文件
+      - ./data:/app/data  # 配置文件，环境变量或配置文件二选一，配置文件比环境变量有着更高的优先级
 
+  nginx:
+    image: nginx:latest
+    container_name: confession-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"      # 或 "8080:8080" 按需映射，前端端口自行修改nginx.conf文件
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf  # 挂载你的nginx配置
+      - ./dist:/app/dist                                   # 挂载编译得到的前端静态资源
+      - ./uploads:/app/uploads                             # 挂载上传目录
+    depends_on:
+      - app
   db:
     image: mysql:latest
     container_name: confession-mysql
@@ -95,18 +109,18 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: confession
-    ports:
-      - "3306:3306"
+    #ports:
+    #  - "3306:3306"
     volumes:
       - ./db_data:/var/lib/mysql  # 持久化数据库
   redis:
     image: redis:latest
     container_name: confession-redis
     restart: unless-stopped
-    ports:
-      - "6379:6379"
+    #ports:
+    #  - "6379:6379"
     volumes:
-      - ./redis/data:/data  
+      - ./redis/data:/data 
       - ./redis/redis.conf:/etc/redis/redis.conf  # 持久化 Redis 配置
 ```
 4. 在dockercompose文件夹同目录下创建`uploads`和`data`与`db_data` `redis`文件夹持久化存放数据
@@ -114,17 +128,27 @@ services:
 mkdir uploads data db_data redis/data
 ```
 
-5. 将redis配置文件拷贝
+5. 将redis和nginx配置文件拷贝
 ```bash
 cp /path/to/yourproject/redis/redis.conf redis/
+cp /path/to/yourproject/nginx/nginx.conf nginx.conf
 ```
 
 （可选）将config.yaml配置文件拷贝到`data`目录下，配置文件比环境变量有更高的优先级
 ```bash
 cp /path/to/yourproject/config/config.example.yaml config.yaml
 ```
+6. 配置好npm环境，前往[这个项目的前端](https://github.com/Chriskyo08/Confession-Wall-Frontend)将其`clone`后进行构建得到dist文件夹。
+```bash
+git clone https://github.com/Chriskyo08/Confession-Wall-Frontend.git
+cd Confession-Wall-Frontend/
+npm install
+npm run build
+cp -r dist /path/to/your/docker/compose/file/dist
+```
 
-6. 执行`docker compose up`即可
+7. 执行`docker compose up -d`即可
+
 ### 手动编译部署
 
 1. 安装依赖：

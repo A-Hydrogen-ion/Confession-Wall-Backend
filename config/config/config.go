@@ -35,6 +35,7 @@ func InitViper() {
 func SetDefault() {
 	// 设置默认值
 	viper.SetDefault("server.port", 8080)
+	viper.SetDefault("server.host", "localhost") // 生产环境，默认只监听本地接口
 	viper.SetDefault("log.level", "info")
 	viper.SetDefault("database.host", "localhost")
 	viper.SetDefault("database.port", 5432)
