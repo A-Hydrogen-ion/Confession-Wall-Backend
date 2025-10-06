@@ -176,9 +176,8 @@ func (ctrl *ConfessionController) CheckInput(c *gin.Context) model.Confession {
 // ListPublicConfessions 查看社区表白
 func (ctrl *ConfessionController) ListPublicConfessions(c *gin.Context) {
 	var uid uint = 0
-	userID := checkUserByID(c, "你还没有登录喵，服务器娘不知道你是谁")
-	if userID == 0 {
-		return
+	if userID, exists := c.Get("user_id"); exists {
+		uid = userID.(uint)
 	}
 	// 解析分页参数
 	limit, offset, ok := ParsePagination(c)
