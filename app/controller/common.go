@@ -38,13 +38,14 @@ func QueryUint(c *gin.Context, key string) (uint, error) {
 // 兼容之前 controller 中的 ParsePagination 实现
 func ParsePagination(c *gin.Context) (limit int, offset int, ok bool) {
 	limitStr := c.DefaultQuery("PageLimit", "10") // 默认每页10条
-	offsetStr := c.DefaultQuery("Page", "0")      // 默认第0页
-	l, err1 := strconv.Atoi(limitStr)             // 转换为整数
-	o, err2 := strconv.Atoi(offsetStr)
-	if err1 != nil || err2 != nil || l < 1 || o < 0 { //合法性检查
+	pageStr := c.DefaultQuery("Page", "1")        // 默认第1页
+	l, err1 := strconv.Atoi(limitStr)
+	p, err2 := strconv.Atoi(pageStr)
+	if err1 != nil || err2 != nil || l < 1 || p < 1 {
 		respondJSON(c, 400, "分页参数不合法喵，你看看你都传入了些什么分页，服务器娘愤怒的告诉你她找不到负数的页码", nil)
 		return 0, 0, false
 	}
+	o := (p - 1) * l
 	return l, o, true
 }
 

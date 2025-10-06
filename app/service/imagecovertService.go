@@ -38,9 +38,6 @@ func UploadImages(c *gin.Context, userID uint) ([]string, error) {
 	// 获取上传的文件
 	files := form.File["images"]
 	// 限制上传图片的数量和大小
-	if len(files) == 0 {
-		return nil, fmt.Errorf("你还没有上传图片喵~")
-	}
 	if len(files) > maxCount {
 		return nil, fmt.Errorf("一次最多上传%d张图片喵~", maxCount)
 	}
