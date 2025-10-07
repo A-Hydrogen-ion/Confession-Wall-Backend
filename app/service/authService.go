@@ -13,7 +13,7 @@ type UserService struct {
 	db *gorm.DB
 }
 
-// 通过NewUserService 创建一个新的 UserService 实例
+// NewUserService 通过NewUserService 创建一个新的 UserService 实例
 // 这样做可以使得之后测试数据库和实际使用的数据库不互相干扰
 func NewUserService(db *gorm.DB) *UserService {
 	if db == nil {
@@ -81,7 +81,7 @@ func (s *UserService) GetUserByUsername(username string) (*model.User, error) { 
 	return &user, nil
 }
 
-// 根据用户ID获取用户
+// GetUserByID 根据用户ID获取用户
 func (s *UserService) GetUserByID(userID uint) (*model.User, error) {
 	var user model.User
 	result := s.db.First(&user, userID)
@@ -91,7 +91,7 @@ func (s *UserService) GetUserByID(userID uint) (*model.User, error) {
 	return &user, nil
 }
 
-// 更新用户密码
+// UpdatePassword 更新用户密码
 func (s *UserService) UpdatePassword(user *model.User, newPassword string) error {
 	user.Password = newPassword // User 的 BeforeSave 钩子会自动 hash 密码，不需要单独hash
 	if err := s.db.Save(user).Error; err != nil {

@@ -19,7 +19,7 @@ func SetDB(db *gorm.DB) {
 	DB = db
 }
 
-// 搞个可导出的函数
+// GetDB 搞个可导出的函数
 func GetDB() *gorm.DB {
 	return DB
 }
@@ -49,7 +49,7 @@ func getDSN() string {
 		viper.GetString("database.name"))
 }
 
-// 连接数据库
+// ConnectDB 连接数据库
 func ConnectDB() {
 	dsn := getDSN()
 	maxRetries := 10
@@ -78,7 +78,7 @@ func ConnectDB() {
 	fmt.Println("数据库姬回应了服务器娘")
 }
 
-// 数据库保活检查
+// Health 数据库保活检查
 func Health() error {
 	if DB == nil {
 		return fmt.Errorf("数据库未连接")
@@ -92,7 +92,7 @@ func Health() error {
 	return sqlDB.Ping()
 }
 
-// 在启动后每次调用保证数据库没有悄悄四掉
+// HealthMonitor 在启动后每次调用保证数据库没有悄悄四掉
 func HealthMonitor(interval time.Duration) {
 	go func() {
 		ticker := time.NewTicker(interval)

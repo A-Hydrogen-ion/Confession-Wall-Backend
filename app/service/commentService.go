@@ -7,18 +7,18 @@ import (
 	"gorm.io/gorm"
 )
 
-// 添加评论
+// AddComment 添加评论
 func AddComment(db *gorm.DB, comment *model.Comment) error {
 	comment.CreatedAt = time.Now()
 	return db.Create(comment).Error
 }
 
-// 删除评论
+// DeleteComment 删除评论
 func DeleteComment(db *gorm.DB, commentID uint) error {
 	return db.Delete(&model.Comment{}, commentID).Error
 }
 
-// 获取某个表白的所有评论，附带用户信息
+// ListComments 获取某个表白的所有评论，附带用户信息
 func ListComments(db *gorm.DB, confessionID uint) ([]model.Comment, error) {
 	var comments []model.Comment
 	err := db.Preload("User"). // 关联用户信息

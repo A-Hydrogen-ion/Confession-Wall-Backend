@@ -11,7 +11,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// 定时批量同步 Redis 点赞量和浏览量到 MySQL
+// SyncRedisToMySQL 定时批量同步 Redis 点赞量和浏览量到 MySQL
 func SyncRedisToMySQL(db *gorm.DB, confessionIDs []uint) {
 	for _, id := range confessionIDs {
 		likeCount, _ := database.RedisClient.SCard(context.Background(), "confession:like:"+strconv.Itoa(int(id))).Result() // 获取点赞数（数组长度）
@@ -23,7 +23,7 @@ func SyncRedisToMySQL(db *gorm.DB, confessionIDs []uint) {
 	}
 }
 
-// 定时批量计算热度分并更新热度榜
+// UpdateHotRank 定时批量计算热度分并更新热度榜
 func UpdateHotRank(confessionIDs []uint) {
 	for _, id := range confessionIDs {
 		viewCount, _ := database.RedisClient.Get(context.Background(), "confession:view:"+strconv.Itoa(int(id))).Int64()
@@ -34,7 +34,7 @@ func UpdateHotRank(confessionIDs []uint) {
 	}
 }
 
-// 启动定时任务
+// StartRedisSync 启动定时任务
 func StartRedisSync(db *gorm.DB) {
 	ticker := time.NewTicker(60 * time.Second) // 每60秒同步一次并更新热度榜单
 	go func() {

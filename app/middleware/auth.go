@@ -1,9 +1,6 @@
 package middleware
 
 import (
-
-	//"github.com/A-Hydrogen-ion/Confession-Wall-Backend/app/controller"
-
 	"net/http"
 	"strings"
 
@@ -92,7 +89,7 @@ func tokenCheck(c *gin.Context, authHeader string) *jwt.CustomClaims { //检查�
 	return claims
 }
 
-// 太好了，原来是预留了接口但是啥也没写
+// OptionalJWTMiddleware 太好了，原来是预留了接口但是啥也没写
 // OptionalJWTMiddleware 可选JWT认证中间件：有token就解析，无token直接放行
 func OptionalJWTMiddleware(m Auth) gin.HandlerFunc {
 	return func(c *gin.Context) {

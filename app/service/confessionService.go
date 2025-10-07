@@ -7,14 +7,14 @@ import (
 	"gorm.io/gorm"
 )
 
-// 创建表白
+// CreateConfession 创建表白
 // 在 service 层通过参数 db *gorm.DB 传递数据库连接
 func CreateConfession(db *gorm.DB, confession *model.Confession) error {
 	confession.ChangedAt = time.Now()
 	return db.Create(confession).Error
 }
 
-// 获取社区表白（带分页）
+// ListPublicConfessions 获取社区表白（带分页）
 func ListPublicConfessions(db *gorm.DB, currentUserID uint, limit int, offset int) ([]model.Confession, error) {
 	var blockedIDs []uint
 	var blockedByIDs []uint
@@ -35,7 +35,7 @@ func ListPublicConfessions(db *gorm.DB, currentUserID uint, limit int, offset in
 	return confessions, err
 }
 
-// 修改表白
+// UpdateConfession 修改表白
 func UpdateConfession(db *gorm.DB, confessionID uint, newContent string, newImages []string) error {
 	var confession model.Confession
 	if err := db.First(&confession, confessionID).Error; err != nil {
@@ -47,7 +47,7 @@ func UpdateConfession(db *gorm.DB, confessionID uint, newContent string, newImag
 	return db.Save(&confession).Error
 }
 
-// 删除表白
+// DeleteConfession 删除表白
 func DeleteConfession(db *gorm.DB, confessionID uint) error {
 	// 先删除评论
 	if err := db.Where("confession_id = ?", confessionID).Delete(&model.Comment{}).Error; err != nil {
@@ -57,21 +57,21 @@ func DeleteConfession(db *gorm.DB, confessionID uint) error {
 	return db.Delete(&model.Confession{}, confessionID).Error
 }
 
-// 根据ID获取单条表白
+// GetConfessionByID 根据ID获取单条表白
 func GetConfessionByID(db *gorm.DB, confessionID uint) (model.Confession, error) {
 	var confession model.Confession
 	err := db.First(&confession, confessionID).Error
 	return confession, err
 }
 
-// 根据多个ID获取表白列表（只给热度榜使用）
+// GetConfessionsByID 根据多个ID获取表白列表（只给热度榜使用）
 func GetConfessionsByID(db *gorm.DB, ids []uint) ([]model.Confession, error) {
 	var confessions []model.Confession
 	err := db.Where("id IN ?", ids).Find(&confessions).Error
 	return confessions, err
 }
 
-// 获取某用户的所有表白（排除黑名单，带分页）
+// GetUserConfessions 获取某用户的所有表白（排除黑名单，带分页）
 func GetUserConfessions(db *gorm.DB, targetUserID uint, currentUserID uint, limit int, offset int) ([]model.Confession, error) {
 	var blockedIDs []uint
 	var blockedByIDs []uint

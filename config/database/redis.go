@@ -11,10 +11,10 @@ import (
 	"gorm.io/gorm"
 )
 
-// 将RedisClient作为全局的 Redis 客户端用于操作Redis数据
+// RedisClient 将RedisClient作为全局的 Redis 客户端用于操作Redis数据
 var RedisClient *redis.Client
 
-// 初始化 Redis 连接，使用从viper传入的配置文件
+// InitRedis 初始化 Redis 连接，使用从viper传入的配置文件
 func InitRedis(gormDB *gorm.DB) {
 	addr := viper.GetString("redis.addr")
 	password := viper.GetString("redis.password")
@@ -34,7 +34,7 @@ func InitRedis(gormDB *gorm.DB) {
 	}
 }
 
-// 预热热度榜
+// PreheatHotRank 预热热度榜
 func PreheatHotRank(db *gorm.DB) error {
 	var confessions []model.Confession //从数据库里面导入文件
 	if err := db.Find(&confessions).Error; err != nil {
@@ -55,7 +55,7 @@ func PreheatHotRank(db *gorm.DB) error {
 	return nil
 }
 
-// 一样的自动重连
+// Reconnect 一样的自动重连
 func Reconnect() {
 	maxRetries := 10                 //最大重试次数
 	retryInterval := 5 * time.Second //每次重试事件
