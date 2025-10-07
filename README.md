@@ -33,7 +33,7 @@ Confession-Wall-Backend/    <br>
 等待与前端对接中……
 
 ### 扩展的功能 
-![](https://geps.dev/progress/96?dangerColor=FFA500&warningColor=39c5bb&successColor=66ccff)
+![](https://geps.dev/progress/100?dangerColor=FFA500&warningColor=39c5bb&successColor=66ccff)
 
 - [x] ~~相同文件去重处理~~不会开发，因为部署服务端可在文件系统层面上实现这个功能
 - [x] 表白消息定时发送
